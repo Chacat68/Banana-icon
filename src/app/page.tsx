@@ -10,6 +10,7 @@ import Link from "next/link";
 const STYLE_PRESETS = [
   { label: "像素风 RPG", value: "pixel art, retro RPG style, 16-bit" },
   { label: "卡通手游", value: "cartoon, mobile game style, vibrant colors" },
+  { label: "二次元", value: "anime style, cel shading, Japanese animation, vivid colors" },
   { label: "赛博朋克", value: "cyberpunk, neon glow, futuristic" },
   { label: "水彩手绘", value: "watercolor, hand-painted, soft edges" },
   { label: "扁平图标", value: "flat design, icon style, minimal, clean" },
