@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Palette, Plus, Trash2, ImagePlus, X, Loader2 } from "lucide-react";
+import { Palette, Plus, Trash2, ImagePlus, X, Loader2, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StyleProfile {
@@ -36,6 +36,8 @@ export default function StylesPage() {
   const [refImageUrl, setRefImageUrl] = useState("");
   const [refImagePreview, setRefImagePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState("");
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -81,6 +83,38 @@ export default function StylesPage() {
     setRefImageUrl("");
     setRefImagePreview("");
   }, []);
+
+  const handleAnalyze = useCallback(async () => {
+    if (!refImageUrl) return;
+    setAnalyzing(true);
+    setAnalyzeError("");
+    try {
+      const res = await fetch("/api/styles/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: refImageUrl }),
+      });
+      const data = (await res.json()) as {
+        style?: string;
+        keywords?: string;
+        negativeWords?: string;
+        description?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setAnalyzeError(data.error || "识别失败");
+        return;
+      }
+      if (data.style) setStyle(data.style);
+      if (data.keywords) setKeywords(data.keywords);
+      if (data.negativeWords) setNegativeWords(data.negativeWords);
+      if (data.description) setDescription(data.description);
+    } catch {
+      setAnalyzeError("网络错误，识别失败");
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [refImageUrl]);
 
   const handleCreate = useCallback(async () => {
     if (!name || !style || !keywords || !projectId) return;
@@ -165,23 +199,43 @@ export default function StylesPage() {
             <div className="col-span-2">
               <label className="mb-1 block text-xs text-zinc-500">风格参考图</label>
               {refImagePreview ? (
-                <div className="relative inline-block">
-                  <img
-                    src={refImagePreview}
-                    alt="参考图"
-                    className="h-24 w-24 rounded-lg border border-zinc-700 object-cover"
-                  />
-                  {uploadingRef && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60">
-                      <Loader2 className="h-5 w-5 animate-spin text-yellow-400" />
-                    </div>
-                  )}
-                  <button
-                    onClick={clearRefImage}
-                    className="absolute -right-2 -top-2 rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-white"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                <div className="flex items-start gap-3">
+                  <div className="relative inline-block">
+                    <img
+                      src={refImagePreview}
+                      alt="参考图"
+                      className="h-24 w-24 rounded-lg border border-zinc-700 object-cover"
+                    />
+                    {uploadingRef && (
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/60">
+                        <Loader2 className="h-5 w-5 animate-spin text-yellow-400" />
+                      </div>
+                    )}
+                    <button
+                      onClick={clearRefImage}
+                      className="absolute -right-2 -top-2 rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={handleAnalyze}
+                      disabled={!refImageUrl || uploadingRef || analyzing}
+                      className="flex items-center gap-1.5 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-3 py-2 text-xs font-medium text-yellow-400 transition-colors hover:bg-yellow-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {analyzing ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      {analyzing ? "识别中…" : "AI 识别生成提示词"}
+                    </button>
+                    <p className="text-[10px] text-zinc-500">上传参考图后点击识别，自动填充风格和关键词</p>
+                    {analyzeError && (
+                      <p className="text-[10px] text-red-400">{analyzeError}</p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <label className="flex h-20 w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-zinc-700 text-zinc-500 transition-colors hover:border-yellow-500 hover:text-yellow-400">
