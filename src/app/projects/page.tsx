@@ -41,6 +41,7 @@ export default function ProjectsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
     });
+    if (!res.ok) return;
     const proj = await res.json() as Project;
     setProjects((p) => [{ ...proj, _count: { assets: 0, tasks: 0 } }, ...p]);
     setName("");

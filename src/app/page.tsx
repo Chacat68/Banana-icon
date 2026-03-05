@@ -183,7 +183,11 @@ export default function GeneratePage() {
           referenceImageUrl: refUrl || referenceImageUrl || undefined,
         }),
       });
-      const data = await res.json() as { id: string; status: string };
+      const data = await res.json() as { id: string; status: string; error?: string };
+      if (!res.ok) {
+        updateTask(taskId, { status: "failed", error: data.error || `Server error (${res.status})` });
+        return;
+      }
       updateTask(taskId, { id: data.id, status: data.status as TaskStatus });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Request failed";

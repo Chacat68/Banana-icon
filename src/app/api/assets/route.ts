@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { assets } from "@/lib/schema";
+import { deleteFromR2 } from "@/lib/r2";
 import { eq, desc } from "drizzle-orm";
 
 /** GET /api/assets — List assets with optional filters */
@@ -8,7 +9,8 @@ export async function GET(req: NextRequest) {
   const db = await getDbFromContext();
   const projectId = req.nextUrl.searchParams.get("projectId");
   const tag = req.nextUrl.searchParams.get("tag");
-  const take = Math.min(Number(req.nextUrl.searchParams.get("limit") || 50), 200);
+  const parsed = Number(req.nextUrl.searchParams.get("limit") || 50);
+  const take = Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 200) : 50;
 
   const query = db
     .select()
@@ -35,6 +37,26 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
   const db = await getDbFromContext();
+
+  // Look up the asset to get the storage key before deleting
+  const [asset] = await db.select().from(assets).where(eq(assets.id, id)).limit(1);
+  if (!asset) {
+    return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+  }
+
+  // Delete from object storage (R2 or local)
+  try {
+    const urlPath = asset.originalUrl;
+    // Convert URL back to storage key: "/assets/xxx" -> "xxx", "/uploads/xxx" -> "ref/xxx" (local)
+    if (urlPath.startsWith("/assets/")) {
+      await deleteFromR2(urlPath.slice("/assets/".length));
+    } else if (urlPath.startsWith("/uploads/")) {
+      await deleteFromR2(urlPath.slice("/uploads/".length));
+    }
+  } catch (err) {
+    console.error("[assets] failed to delete from storage:", err);
+  }
+
   await db.delete(assets).where(eq(assets.id, id));
   return NextResponse.json({ ok: true });
 }
