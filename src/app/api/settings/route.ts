@@ -3,7 +3,7 @@ import { getDbFromContext } from "@/lib/db";
 import { settings } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 
-const ALLOWED_KEYS = ["nano_banana_api_key", "nano_banana_api_url"];
+const ALLOWED_KEYS = ["nano_banana_api_url"];
 
 /** GET /api/settings — Get all settings (values masked for secrets) */
 export async function GET() {
@@ -12,15 +12,7 @@ export async function GET() {
 
   const result: Record<string, string> = {};
   for (const row of rows) {
-    if (row.key === "nano_banana_api_key" && row.value) {
-      // Mask the API key — only show last 4 chars
-      result[row.key] =
-        row.value.length > 4
-          ? "•".repeat(row.value.length - 4) + row.value.slice(-4)
-          : "••••";
-    } else {
-      result[row.key] = row.value;
-    }
+    result[row.key] = row.value;
   }
 
   return NextResponse.json(result);

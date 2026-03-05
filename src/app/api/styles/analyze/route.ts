@@ -3,6 +3,7 @@ import { analyzeImage } from "@/lib/nano-banana";
 
 /** POST /api/styles/analyze — Analyze an image and return style/prompt suggestions */
 export async function POST(req: NextRequest) {
+  const clientKey = req.headers.get("x-api-key") || undefined;
   const body = (await req.json()) as { imageUrl?: string };
   const { imageUrl } = body;
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await analyzeImage(imageUrl);
+    const result = await analyzeImage(imageUrl, clientKey);
     return NextResponse.json(result);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Analysis failed";

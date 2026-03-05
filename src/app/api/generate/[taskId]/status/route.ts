@@ -7,9 +7,10 @@ import { v4 as uuid } from "uuid";
 
 /** GET /api/generate/[taskId]/status — Poll task status */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
+  const clientKey = req.headers.get("x-api-key") || undefined;
   const { taskId } = await params;
   const db = await getDbFromContext();
 
@@ -26,7 +27,7 @@ export async function GET(
   // If still running, poll the upstream API
   if (task.status === "running" || task.status === "queued") {
     try {
-      const result = await getGenerationStatus(taskId);
+      const result = await getGenerationStatus(taskId, clientKey);
       if (result.status === "completed" && result.images) {
         await db
           .update(generationTasks)

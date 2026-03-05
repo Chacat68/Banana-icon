@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Palette, Plus, Trash2, ImagePlus, X, Loader2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getApiKeyHeaders } from "@/lib/utils";
 
 interface StyleProfile {
   id: string;
@@ -91,7 +91,7 @@ export default function StylesPage() {
     try {
       const res = await fetch("/api/styles/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getApiKeyHeaders() },
         body: JSON.stringify({ imageUrl: refImageUrl }),
       });
       const data = (await res.json()) as {
