@@ -74,13 +74,13 @@ export default function AssetsPage() {
       const res = await fetch("/api/projects");
       const data = (await res.json()) as Project[];
       setProjects(data);
-      if (data.length > 0 && !importProjectId) {
-        setImportProjectId(data[0].id);
+      if (data.length > 0) {
+        setImportProjectId((prev) => prev || data[0].id);
       }
     } catch {
       // ignore
     }
-  }, [importProjectId]);
+  }, []);
 
   useEffect(() => {
     loadAssets();

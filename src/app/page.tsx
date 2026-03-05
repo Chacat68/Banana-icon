@@ -109,8 +109,11 @@ export default function GeneratePage() {
   }, []);
 
   const clearRefImage = useCallback(() => {
+    setReferenceImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
     setReferenceImageUrl("");
-    setReferenceImagePreview("");
   }, []);
 
   const handleBatchFilesSelected = useCallback(

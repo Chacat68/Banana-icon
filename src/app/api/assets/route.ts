@@ -17,13 +17,13 @@ export async function GET(req: NextRequest) {
     .orderBy(desc(assets.createdAt))
     .limit(take);
 
-  let result = await query;
+  const rows = await query;
 
-  if (tag) {
-    result = result.filter(
-      (a) => a.tags && a.tags.toLowerCase().includes(tag.toLowerCase())
-    );
-  }
+  const result = tag
+    ? rows.filter(
+        (a: { tags: string | null }) => a.tags && a.tags.toLowerCase().includes(tag.toLowerCase())
+      )
+    : rows;
 
   return NextResponse.json(result);
 }

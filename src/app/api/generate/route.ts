@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { generationTasks, assets } from "@/lib/schema";
 import { submitGeneration, buildPrompt } from "@/lib/nano-banana";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, inArray } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
 /** POST /api/generate — Create a new generation task */
@@ -110,10 +110,14 @@ export async function POST(req: NextRequest) {
         })
         .catch(async (err: unknown) => {
           const message = err instanceof Error ? err.message : String(err);
-          await db
-            .update(generationTasks)
-            .set({ status: "failed", errorMessage: message, updatedAt: new Date().toISOString() })
-            .where(eq(generationTasks.id, taskId));
+          try {
+            await db
+              .update(generationTasks)
+              .set({ status: "failed", errorMessage: message, updatedAt: new Date().toISOString() })
+              .where(eq(generationTasks.id, taskId));
+          } catch (dbErr) {
+            console.error("[generate] failed to update task status:", dbErr);
+          }
         });
 
     // Use waitUntil on Cloudflare, otherwise just run in background
@@ -123,7 +127,9 @@ export async function POST(req: NextRequest) {
       ctx.waitUntil(generationPromise);
     } catch {
       // Local dev: fire and forget
-      generationPromise.catch(() => {});
+      generationPromise.catch((err) => {
+        console.error("[generate] background task error:", err);
+      });
     }
 
     return NextResponse.json(task, { status: 201 });
@@ -138,29 +144,23 @@ export async function GET(req: NextRequest) {
   const db = await getDbFromContext();
   const projectId = req.nextUrl.searchParams.get("projectId");
 
-  const tasks = await db
-    .select()
-    .from(generationTasks)
-    .where(projectId ? eq(generationTasks.projectId, projectId) : undefined)
-    .orderBy(desc(generationTasks.createdAt))
-    .limit(50);
+  type Task = typeof generationTasks.$inferSelect;
+  const tasks: Task[] = projectId
+    ? await db.select().from(generationTasks)
+        .where(eq(generationTasks.projectId, projectId))
+        .orderBy(desc(generationTasks.createdAt)).limit(50)
+    : await db.select().from(generationTasks)
+        .orderBy(desc(generationTasks.createdAt)).limit(50);
 
   // Attach assets to each task
   const taskIds = tasks.map((t) => t.id);
-  const allAssets = taskIds.length
-    ? await db.select().from(assets).where(
-        // D1 doesn't support IN with array param well, so loop
-        eq(assets.taskId, taskIds[0])
-      )
+  const taskAssetRows = taskIds.length > 0
+    ? await db.select().from(assets).where(inArray(assets.taskId, taskIds))
     : [];
-  // For more than one task, fetch all assets and group
-  const assetsByTask: Record<string, typeof allAssets> = {};
-  if (taskIds.length > 0) {
-    const all = await db.select().from(assets);
-    for (const a of all) {
-      if (a.taskId && taskIds.includes(a.taskId)) {
-        (assetsByTask[a.taskId] ??= []).push(a);
-      }
+  const assetsByTask: Record<string, typeof taskAssetRows> = {};
+  for (const a of taskAssetRows) {
+    if (a.taskId) {
+      (assetsByTask[a.taskId] ??= []).push(a);
     }
   }
 
