@@ -45,6 +45,7 @@ export default function GeneratePage() {
   const [referenceImageUrl, setReferenceImageUrl] = useState("");
   const [referenceImagePreview, setReferenceImagePreview] = useState("");
   const [uploadingRef, setUploadingRef] = useState(false);
+  const [draggingRef, setDraggingRef] = useState(false);
 
   // Batch mode
   const [batchMode, setBatchMode] = useState(false);
@@ -413,7 +414,20 @@ export default function GeneratePage() {
 
         {/* Reference Image */}
         <label className="mb-1 block text-sm text-zinc-400">风格参考图</label>
-        <div className="mb-4">
+        <div
+          className="mb-4"
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!referenceImagePreview) setDraggingRef(true);
+          }}
+          onDragLeave={() => setDraggingRef(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDraggingRef(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f && f.type.startsWith("image/")) handleRefImageUpload(f);
+          }}
+        >
           {referenceImagePreview ? (
             <div className="relative inline-block">
               <img
@@ -434,10 +448,15 @@ export default function GeneratePage() {
               </button>
             </div>
           ) : (
-            <label className="flex h-32 w-full cursor-pointer items-center justify-center rounded-lg border border-dashed border-zinc-700 text-zinc-500 transition-colors hover:border-yellow-500 hover:text-yellow-400">
+            <label className={cn(
+              "flex h-32 w-full cursor-pointer items-center justify-center rounded-lg border border-dashed transition-colors",
+              draggingRef
+                ? "border-yellow-500 bg-yellow-500/10 text-yellow-400"
+                : "border-zinc-700 text-zinc-500 hover:border-yellow-500 hover:text-yellow-400"
+            )}>
               <div className="flex flex-col items-center gap-1">
                 <ImagePlus className="h-6 w-6" />
-                <span className="text-xs">上传参考图</span>
+                <span className="text-xs">{draggingRef ? "松开上传" : "点击或拖拽上传参考图"}</span>
               </div>
               <input
                 type="file"
