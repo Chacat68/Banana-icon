@@ -5,6 +5,7 @@
   "description": "AI Game Asset Generator powered by Nano Banana",
   "scripts": {
     "dev": "next dev",
+    "local": "node scripts/start-local.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
