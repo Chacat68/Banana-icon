@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Settings, Eye, EyeOff, Save, Loader2, CheckCircle2, Key, Link } from "lucide-react";
+import { Settings, Eye, EyeOff, Save, Loader2, CheckCircle2, Key, Link, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -12,6 +12,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [keyEdited, setKeyEdited] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [testOk, setTestOk] = useState(false);
 
   const loadSettings = useCallback(async () => {
     setLoading(true);
@@ -59,6 +62,26 @@ export default function SettingsPage() {
       setSaving(false);
     }
   }, [apiKey, apiUrl, keyEdited, loadSettings]);
+
+  const handleTest = useCallback(async () => {
+    setTesting(true);
+    setTestResult(null);
+    setTestOk(false);
+    try {
+      const res = await fetch("/api/settings/test", { method: "POST" });
+      const data = (await res.json()) as { ok?: boolean; error?: string; latency?: number };
+      if (data.ok) {
+        setTestOk(true);
+        setTestResult(`连接成功${data.latency ? ` (${data.latency}ms)` : ""}`);
+      } else {
+        setTestResult(data.error || "连接失败");
+      }
+    } catch {
+      setTestResult("网络错误，无法测试");
+    } finally {
+      setTesting(false);
+    }
+  }, []);
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -140,36 +163,55 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              {/* Save button */}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className={cn(
-                  "flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
-                  saved
-                    ? "bg-green-500/20 text-green-400"
-                    : saving
-                      ? "cursor-not-allowed bg-zinc-700 text-zinc-500"
-                      : "bg-yellow-500 text-black hover:bg-yellow-400"
-                )}
-              >
-                {saved ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    已保存
-                  </>
-                ) : saving ? (
-                  <>
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className={cn(
+                    "flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
+                    saved
+                      ? "bg-green-500/20 text-green-400"
+                      : saving
+                        ? "cursor-not-allowed bg-zinc-700 text-zinc-500"
+                        : "bg-yellow-500 text-black hover:bg-yellow-400"
+                  )}
+                >
+                  {saved ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      已保存
+                    </>
+                  ) : saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      保存中…
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      保存配置
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={handleTest}
+                  disabled={testing}
+                  className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {testing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    保存中…
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    保存配置
-                  </>
-                )}
-              </button>
+                  ) : (
+                    <Zap className="h-4 w-4" />
+                  )}
+                  测试连接
+                </button>
+              </div>
+              {testResult && (
+                <p className={cn("mt-2 text-xs", testOk ? "text-green-400" : "text-red-400")}>
+                  {testOk ? "✓" : "✗"} {testResult}
+                </p>
+              )}
             </div>
 
             {/* Info */}

@@ -77,6 +77,23 @@ export async function getGenerationStatus(
   return apiFetch<GenerateImageResult>(`/v1/generate/${taskId}`);
 }
 
+/** Analyze an image to extract style & prompt suggestions */
+export interface AnalyzeImageResult {
+  style: string;
+  keywords: string;
+  negativeWords: string;
+  description: string;
+}
+
+export async function analyzeImage(
+  imageUrl: string
+): Promise<AnalyzeImageResult> {
+  return apiFetch<AnalyzeImageResult>("/v1/analyze", {
+    method: "POST",
+    body: JSON.stringify({ image_url: imageUrl }),
+  });
+}
+
 /** Build a full prompt from template fields */
 export function buildPrompt(fields: {
   subject: string;
