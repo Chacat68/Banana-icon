@@ -29,23 +29,28 @@ export async function GET(
     try {
       const result = await getGenerationStatus(taskId, clientKey);
       if (result.status === "completed" && result.images) {
-        await db
-          .update(generationTasks)
-          .set({ status: "success", updatedAt: new Date().toISOString() })
-          .where(eq(generationTasks.id, taskId));
-        for (const img of result.images) {
-          await db.insert(assets).values({
-            id: uuid(),
-            filename: `${taskId}_${img.seed}.png`,
-            originalUrl: img.url,
-            width: task.width,
-            height: task.height,
-            prompt: task.prompt,
-            seed: img.seed,
-            projectId: task.projectId,
-            taskId,
-            createdAt: new Date().toISOString(),
-          });
+        // Idempotent: re-check task status to prevent duplicate asset insertion
+        const [current] = await db.select().from(generationTasks)
+          .where(eq(generationTasks.id, taskId)).limit(1);
+        if (current && current.status !== "success") {
+          await db
+            .update(generationTasks)
+            .set({ status: "success", updatedAt: new Date().toISOString() })
+            .where(eq(generationTasks.id, taskId));
+          for (const img of result.images) {
+            await db.insert(assets).values({
+              id: uuid(),
+              filename: `${taskId}_${img.seed}.png`,
+              originalUrl: img.url,
+              width: task.width,
+              height: task.height,
+              prompt: task.prompt,
+              seed: img.seed,
+              projectId: task.projectId,
+              taskId,
+              createdAt: new Date().toISOString(),
+            });
+          }
         }
         // Return updated task with assets
         const [updated] = await db

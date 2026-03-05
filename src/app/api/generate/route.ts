@@ -83,23 +83,28 @@ export async function POST(req: NextRequest) {
       }, clientKey)
         .then(async (result) => {
           if (result.status === "completed" && result.images) {
-            await db
-              .update(generationTasks)
-              .set({ status: "success", updatedAt: new Date().toISOString() })
-              .where(eq(generationTasks.id, taskId));
-            for (const img of result.images) {
-              await db.insert(assets).values({
-                id: uuid(),
-                filename: `${taskId}_${img.seed}.png`,
-                originalUrl: img.url,
-                width,
-                height,
-                prompt,
-                seed: img.seed,
-                projectId,
-                taskId,
-                createdAt: new Date().toISOString(),
-              });
+            // Idempotent: only insert assets if task hasn't already been marked success
+            const [current] = await db.select().from(generationTasks)
+              .where(eq(generationTasks.id, taskId)).limit(1);
+            if (current && current.status !== "success") {
+              await db
+                .update(generationTasks)
+                .set({ status: "success", updatedAt: new Date().toISOString() })
+                .where(eq(generationTasks.id, taskId));
+              for (const img of result.images) {
+                await db.insert(assets).values({
+                  id: uuid(),
+                  filename: `${taskId}_${img.seed}.png`,
+                  originalUrl: img.url,
+                  width,
+                  height,
+                  prompt,
+                  seed: img.seed,
+                  projectId,
+                  taskId,
+                  createdAt: new Date().toISOString(),
+                });
+              }
             }
           } else {
             await db

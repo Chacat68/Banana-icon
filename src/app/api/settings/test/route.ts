@@ -38,8 +38,6 @@ export async function POST(req: NextRequest) {
     });
     const latency = Date.now() - start;
 
-    // Any response (even 400) means the server is reachable and the key is accepted
-    // 401/403 means auth failure
     if (res.status === 401 || res.status === 403) {
       return NextResponse.json({
         ok: false,
@@ -48,6 +46,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    if (res.status >= 500) {
+      return NextResponse.json({
+        ok: false,
+        error: `服务端错误 (${res.status})`,
+        latency,
+      });
+    }
+
+    // 2xx or 4xx (like 400 for our dummy request) means server is reachable
     return NextResponse.json({ ok: true, latency });
   } catch (e) {
     const latency = Date.now() - start;

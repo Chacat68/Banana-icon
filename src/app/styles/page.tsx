@@ -128,6 +128,7 @@ export default function StylesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, description, style, keywords, negativeWords, projectId, referenceImageUrl: refImageUrl || undefined }),
     });
+    if (!res.ok) return;
     const profile = await res.json() as StyleProfile;
     setProfiles((p) => [profile, ...p]);
     setName(""); setDescription(""); setStyle(""); setKeywords(""); setNegativeWords("");
