@@ -7,6 +7,7 @@ import { v4 as uuid } from "uuid";
 
 /** POST /api/generate — Create a new generation task */
 export async function POST(req: NextRequest) {
+  const clientKey = req.headers.get("x-api-key") || undefined;
   try {
     const body = await req.json() as Record<string, unknown>;
     const {
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
         num_images: batchSize,
         style,
         reference_image_url: referenceImageUrl,
-      })
+      }, clientKey)
         .then(async (result) => {
           if (result.status === "completed" && result.images) {
             await db

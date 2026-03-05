@@ -2,7 +2,6 @@
 
 import { getDbFromContext } from "@/lib/db";
 import { settings } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 
 export interface GenerateImageParams {
   prompt: string;
@@ -25,26 +24,34 @@ export interface GenerateImageResult {
 const ENV_API_URL = process.env.NANO_BANANA_API_URL || "";
 const ENV_API_KEY = process.env.NANO_BANANA_API_KEY || "";
 
-async function getApiConfig(): Promise<{ url: string; key: string }> {
+/**
+ * Get API config. API Key priority: clientKey param > env var.
+ * API URL priority: DB setting > env var.
+ * API Key is never stored in the database.
+ */
+async function getApiConfig(clientKey?: string): Promise<{ url: string; key: string }> {
+  let url = ENV_API_URL;
   try {
     const db = await getDbFromContext();
     const rows = await db.select().from(settings);
-    const map: Record<string, string> = {};
-    for (const r of rows) map[r.key] = r.value;
-    return {
-      url: map.nano_banana_api_url || ENV_API_URL,
-      key: map.nano_banana_api_key || ENV_API_KEY,
-    };
+    for (const r of rows) {
+      if (r.key === "nano_banana_api_url") url = r.value;
+    }
   } catch {
-    return { url: ENV_API_URL, key: ENV_API_KEY };
+    // fall back to env
   }
+  return {
+    url,
+    key: clientKey || ENV_API_KEY,
+  };
 }
 
 async function apiFetch<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  clientKey?: string,
 ): Promise<T> {
-  const { url, key } = await getApiConfig();
+  const { url, key } = await getApiConfig(clientKey);
   const res = await fetch(`${url}${path}`, {
     ...options,
     headers: {
@@ -62,19 +69,21 @@ async function apiFetch<T>(
 
 /** Submit a generation request */
 export async function submitGeneration(
-  params: GenerateImageParams
+  params: GenerateImageParams,
+  clientKey?: string,
 ): Promise<GenerateImageResult> {
   return apiFetch<GenerateImageResult>("/v1/generate", {
     method: "POST",
     body: JSON.stringify(params),
-  });
+  }, clientKey);
 }
 
 /** Poll for generation result */
 export async function getGenerationStatus(
-  taskId: string
+  taskId: string,
+  clientKey?: string,
 ): Promise<GenerateImageResult> {
-  return apiFetch<GenerateImageResult>(`/v1/generate/${taskId}`);
+  return apiFetch<GenerateImageResult>(`/v1/generate/${taskId}`, {}, clientKey);
 }
 
 /** Analyze an image to extract style & prompt suggestions */
@@ -86,12 +95,13 @@ export interface AnalyzeImageResult {
 }
 
 export async function analyzeImage(
-  imageUrl: string
+  imageUrl: string,
+  clientKey?: string,
 ): Promise<AnalyzeImageResult> {
   return apiFetch<AnalyzeImageResult>("/v1/analyze", {
     method: "POST",
     body: JSON.stringify({ image_url: imageUrl }),
-  });
+  }, clientKey);
 }
 
 /** Build a full prompt from template fields */

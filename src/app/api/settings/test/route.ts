@@ -1,19 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { settings } from "@/lib/schema";
 
 /** POST /api/settings/test — Test API connectivity */
-export async function POST() {
+export async function POST(req: NextRequest) {
+  // API Key comes from client header (stored in browser localStorage)
+  const apiKey = req.headers.get("x-api-key") || process.env.NANO_BANANA_API_KEY || "";
   let apiUrl = process.env.NANO_BANANA_API_URL || "";
-  let apiKey = process.env.NANO_BANANA_API_KEY || "";
 
   try {
     const db = await getDbFromContext();
     const rows = await db.select().from(settings);
-    const map: Record<string, string> = {};
-    for (const r of rows) map[r.key] = r.value;
-    if (map.nano_banana_api_url) apiUrl = map.nano_banana_api_url;
-    if (map.nano_banana_api_key) apiKey = map.nano_banana_api_key;
+    for (const r of rows) {
+      if (r.key === "nano_banana_api_url") apiUrl = r.value;
+    }
   } catch {
     // fall back to env
   }

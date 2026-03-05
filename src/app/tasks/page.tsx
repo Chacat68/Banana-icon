@@ -10,7 +10,7 @@ import {
   Trash2,
   ImageIcon,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getApiKeyHeaders } from "@/lib/utils";
 import { useTaskStore, type TaskItem, type TaskStatus } from "@/store/task-store";
 import Link from "next/link";
 
@@ -72,7 +72,8 @@ export default function TasksPage() {
       for (const task of pending) {
         try {
           const res = await fetch(
-            `/api/generate/${encodeURIComponent(task.id)}/status`
+            `/api/generate/${encodeURIComponent(task.id)}/status`,
+            { headers: getApiKeyHeaders() }
           );
           const data = (await res.json()) as {
             status: string;

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Sparkles, Loader2, AlertCircle, ChevronDown, ImagePlus, X, ListTodo, Plus, Trash2, Layers, FolderOpen } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getApiKeyHeaders } from "@/lib/utils";
 import { useTaskStore, type TaskItem, type TaskStatus } from "@/store/task-store";
 import { v4 as uuid } from "uuid";
 import Link from "next/link";
@@ -166,7 +166,7 @@ export default function GeneratePage() {
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getApiKeyHeaders() },
         body: JSON.stringify({
           projectId: selectedProject,
           subject: subjectText,

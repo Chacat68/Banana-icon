@@ -11,7 +11,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [keyEdited, setKeyEdited] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
   const [testOk, setTestOk] = useState(false);
@@ -19,11 +18,12 @@ export default function SettingsPage() {
   const loadSettings = useCallback(async () => {
     setLoading(true);
     try {
+      // API URL from server DB
       const res = await fetch("/api/settings");
       const data = (await res.json()) as Record<string, string>;
-      setApiKey(data.nano_banana_api_key || "");
       setApiUrl(data.nano_banana_api_url || "");
-      setKeyEdited(false);
+      // API Key from localStorage only
+      setApiKey(localStorage.getItem("nano_banana_api_key") || "");
     } catch {
       // ignore
     } finally {
@@ -39,36 +39,39 @@ export default function SettingsPage() {
     setSaving(true);
     setSaved(false);
     try {
-      const body: Record<string, string> = {};
-      if (apiUrl.trim()) body.nano_banana_api_url = apiUrl.trim();
-      // Only send API key if the user actually edited it (not the masked value)
-      if (keyEdited && apiKey.trim()) body.nano_banana_api_key = apiKey.trim();
-
-      await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      // Save API URL to server DB
+      if (apiUrl.trim()) {
+        await fetch("/api/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nano_banana_api_url: apiUrl.trim() }),
+        });
+      }
+      // Save API Key to localStorage only — never sent to server
+      if (apiKey.trim()) {
+        localStorage.setItem("nano_banana_api_key", apiKey.trim());
+      } else {
+        localStorage.removeItem("nano_banana_api_key");
+      }
       setSaved(true);
-      setKeyEdited(false);
-      // Reload to get masked key
-      setTimeout(() => {
-        loadSettings();
-        setSaved(false);
-      }, 1500);
+      setTimeout(() => setSaved(false), 1500);
     } catch {
       // ignore
     } finally {
       setSaving(false);
     }
-  }, [apiKey, apiUrl, keyEdited, loadSettings]);
+  }, [apiKey, apiUrl]);
 
   const handleTest = useCallback(async () => {
     setTesting(true);
     setTestResult(null);
     setTestOk(false);
     try {
-      const res = await fetch("/api/settings/test", { method: "POST" });
+      const key = apiKey.trim() || localStorage.getItem("nano_banana_api_key") || "";
+      const res = await fetch("/api/settings/test", {
+        method: "POST",
+        headers: key ? { "X-Api-Key": key } : {},
+      });
       const data = (await res.json()) as { ok?: boolean; error?: string; latency?: number };
       if (data.ok) {
         setTestOk(true);
@@ -81,7 +84,7 @@ export default function SettingsPage() {
     } finally {
       setTesting(false);
     }
-  }, []);
+  }, [apiKey]);
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -134,17 +137,7 @@ export default function SettingsPage() {
                     className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 pr-10 text-sm outline-none focus:border-yellow-500"
                     placeholder="输入你的 API Key"
                     value={apiKey}
-                    onChange={(e) => {
-                      setApiKey(e.target.value);
-                      setKeyEdited(true);
-                    }}
-                    onFocus={() => {
-                      // Clear masked value on focus so user can type fresh
-                      if (!keyEdited && apiKey.includes("•")) {
-                        setApiKey("");
-                        setKeyEdited(true);
-                      }
-                    }}
+                    onChange={(e) => setApiKey(e.target.value)}
                   />
                   <button
                     type="button"
@@ -218,10 +211,11 @@ export default function SettingsPage() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
               <h3 className="mb-2 text-xs font-medium text-zinc-400">说明</h3>
               <ul className="space-y-1 text-xs text-zinc-500">
-                <li>• API Key 保存后将以掩码方式显示，仅展示最后 4 位</li>
-                <li>• 配置保存在数据库中，服务重启后仍然有效</li>
-                <li>• 也可通过环境变量 NANO_BANANA_API_KEY 和 NANO_BANANA_API_URL 配置</li>
-                <li>• 数据库中的配置优先级高于环境变量</li>
+                <li>• API Key 仅保存在浏览器本地（localStorage），不会上传至服务器或云端</li>
+                <li>• 清除浏览器数据会丢失 API Key，请妥善保管原始密钥</li>
+                <li>• API URL 保存在服务端数据库中，多设备共享</li>
+                <li>• 也可通过环境变量 NANO_BANANA_API_KEY 和 NANO_BANANA_API_URL 作为默认值</li>
+                <li>• 浏览器中的 API Key 优先级高于环境变量</li>
               </ul>
             </div>
           </div>
