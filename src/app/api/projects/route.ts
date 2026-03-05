@@ -8,30 +8,28 @@ import { v4 as uuid } from "uuid";
 export async function GET() {
   const db = await getDbFromContext();
 
-  const projectList = await db
-    .select()
-    .from(projects)
-    .orderBy(desc(projects.createdAt));
+  type Project = typeof projects.$inferSelect;
+  const projectList: Project[] = await db.select().from(projects).orderBy(desc(projects.createdAt));
 
-  // Count assets and tasks per project
-  const result = [];
-  for (const p of projectList) {
-    const [assetCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(assets)
-      .where(eq(assets.projectId, p.id));
-    const [taskCount] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(generationTasks)
-      .where(eq(generationTasks.projectId, p.id));
-    result.push({
-      ...p,
-      _count: {
-        assets: assetCount?.count ?? 0,
-        tasks: taskCount?.count ?? 0,
-      },
-    });
-  }
+  const [assetCounts, taskCounts] = await Promise.all([
+    db.select({ projectId: assets.projectId, count: sql<number>`count(*)` })
+      .from(assets).groupBy(assets.projectId),
+    db.select({ projectId: generationTasks.projectId, count: sql<number>`count(*)` })
+      .from(generationTasks).groupBy(generationTasks.projectId),
+  ]);
+
+  const assetCountMap: Record<string, number> = {};
+  for (const r of assetCounts) assetCountMap[r.projectId] = r.count;
+  const taskCountMap: Record<string, number> = {};
+  for (const r of taskCounts) taskCountMap[r.projectId] = r.count;
+
+  const result = projectList.map((p) => ({
+    ...p,
+    _count: {
+      assets: assetCountMap[p.id] ?? 0,
+      tasks: taskCountMap[p.id] ?? 0,
+    },
+  }));
 
   return NextResponse.json(result);
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeImage } from "@/lib/nano-banana";
+import { isValidExternalUrl } from "@/lib/utils";
 
 /** POST /api/styles/analyze — Analyze an image and return style/prompt suggestions */
 export async function POST(req: NextRequest) {
@@ -10,6 +11,13 @@ export async function POST(req: NextRequest) {
   if (!imageUrl) {
     return NextResponse.json(
       { error: "imageUrl is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!isValidExternalUrl(imageUrl)) {
+    return NextResponse.json(
+      { error: "Invalid or disallowed URL" },
       { status: 400 }
     );
   }

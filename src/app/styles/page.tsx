@@ -49,13 +49,15 @@ export default function StylesPage() {
       setProfiles(await stylesRes.json() as StyleProfile[]);
       const projs = await projRes.json() as Project[];
       setProjects(projs);
-      if (projs.length > 0 && !projectId) setProjectId(projs[0].id);
+      if (projs.length > 0) {
+        setProjectId((prev) => prev || projs[0].id);
+      }
     } catch {
       //
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -80,8 +82,11 @@ export default function StylesPage() {
   }, []);
 
   const clearRefImage = useCallback(() => {
+    setRefImagePreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return "";
+    });
     setRefImageUrl("");
-    setRefImagePreview("");
   }, []);
 
   const handleAnalyze = useCallback(async () => {
