@@ -87,7 +87,7 @@ export default function SettingsPage() {
   }, [apiKey]);
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    <div className="page-shell">
       <div className="mx-auto max-w-xl">
         <h1 className="mb-6 text-xl font-semibold flex items-center gap-2">
           <Settings className="h-5 w-5 text-yellow-400" />

@@ -7,7 +7,6 @@ import {
   AlertCircle,
   ArrowLeft,
   RefreshCw,
-  Trash2,
   ImageIcon,
 } from "lucide-react";
 import { cn, getApiKeyHeaders } from "@/lib/utils";
@@ -36,6 +35,20 @@ interface TaskWithAssets {
     height: number;
   }[];
 }
+
+const statusLabels: Record<string, string> = {
+  queued: "排队中",
+  running: "生成中",
+  success: "已完成",
+  failed: "失败",
+};
+
+const statusClassNames: Record<string, string> = {
+  queued: "status-pill status-pill-queued",
+  running: "status-pill status-pill-running",
+  success: "status-pill status-pill-success",
+  failed: "status-pill status-pill-failed",
+};
 
 export default function TasksPage() {
   const [serverTasks, setServerTasks] = useState<TaskWithAssets[]>([]);
@@ -102,12 +115,50 @@ export default function TasksPage() {
   // Merge local tasks with server tasks (local tasks take priority for recent ones)
   const localIds = new Set(localTasks.map((t) => t.id));
   const mergedServerTasks = serverTasks.filter((t) => !localIds.has(t.id));
+  const runningCount = [...localTasks, ...mergedServerTasks].filter(
+    (task) => task.status === "queued" || task.status === "running"
+  ).length;
+  const successCount = [...localTasks, ...mergedServerTasks].filter(
+    (task) => task.status === "success"
+  ).length;
+  const failedCount = [...localTasks, ...mergedServerTasks].filter(
+    (task) => task.status === "failed"
+  ).length;
 
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <div className="mx-auto max-w-4xl">
+    <div className="page-shell page-shell-wide">
+      <div className="content-grid mx-auto max-w-5xl">
+        <div className="hero-banner">
+          <div>
+            <p className="hero-kicker">Task Ledger</p>
+            <h1 className="hero-title font-display">把队列、结果和异常都放在一张任务看板里。</h1>
+            <p className="hero-copy">
+              这里不只显示历史记录。它把当前会话中的本地任务、服务端任务和最终产出统一放在一个可刷新的时间线里，方便你盯住卡住的请求和刚完成的结果。
+            </p>
+          </div>
+          <div className="mini-stat-grid">
+            <div className="mini-stat">
+              <div className="mini-stat-label">处理中</div>
+              <div className="mini-stat-value font-display">{runningCount}</div>
+              <div className="mini-stat-note">正在排队或生成中的任务</div>
+            </div>
+            <div className="mini-stat">
+              <div className="mini-stat-label">已完成</div>
+              <div className="mini-stat-value font-display">{successCount}</div>
+              <div className="mini-stat-note">已经拿到结果图的任务</div>
+            </div>
+            <div className="mini-stat">
+              <div className="mini-stat-label">异常</div>
+              <div className="mini-stat-value font-display">{failedCount}</div>
+              <div className="mini-stat-note">需要重新生成或检查配置</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="section-panel">
+          <div className="section-panel-inner">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
               href="/"
@@ -132,7 +183,7 @@ export default function TasksPage() {
 
         {/* Local tasks (in-progress) */}
         {localTasks.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-8">
             <h2 className="mb-3 text-sm font-medium text-zinc-400">
               当前会话任务
             </h2>
@@ -173,6 +224,8 @@ export default function TasksPage() {
             </div>
           )}
         </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -180,128 +233,114 @@ export default function TasksPage() {
 
 /* ── Local task card (from zustand store) ── */
 function LocalTaskCard({ task }: { task: TaskItem }) {
-  const statusColors: Record<string, string> = {
-    queued: "text-zinc-400 bg-zinc-800",
-    running: "text-blue-400 bg-blue-500/10",
-    success: "text-green-400 bg-green-500/10",
-    failed: "text-red-400 bg-red-500/10",
-  };
-  const statusLabels: Record<string, string> = {
-    queued: "排队中",
-    running: "生成中",
-    success: "已完成",
-    failed: "失败",
-  };
-
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-xs font-medium",
-            statusColors[task.status]
-          )}
-        >
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="task-card-grid">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className={cn(statusClassNames[task.status])}>
           {task.status === "running" && (
             <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
           )}
-          {statusLabels[task.status]}
-        </span>
-        <span className="text-xs text-zinc-600">
-          {new Date(task.createdAt).toLocaleTimeString()}
-        </span>
-      </div>
-      <p className="mb-2 text-sm text-zinc-300 line-clamp-2">{task.prompt}</p>
-      {task.error && (
-        <p className="flex items-center gap-1 text-xs text-red-400">
-          <AlertCircle className="h-3 w-3" />
-          {task.error}
-        </p>
-      )}
-      {task.imageUrls.length > 0 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto">
-          {task.imageUrls.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt={`Generated ${i}`}
-              className="h-24 w-24 rounded-lg border border-zinc-700 object-cover"
-            />
-          ))}
+              {statusLabels[task.status]}
+            </span>
+            <span className="text-xs text-zinc-600">
+              {new Date(task.createdAt).toLocaleTimeString()}
+            </span>
+          </div>
+          <p className="mb-3 text-sm leading-6 text-zinc-300">{task.prompt}</p>
+          <div className="meta-row">
+            <span className="meta-chip">来源: 当前会话</span>
+            <span className="meta-chip">结果数: {task.imageUrls.length}</span>
+          </div>
+          {task.error && (
+            <p className="mt-3 flex items-center gap-1 text-xs text-red-400">
+              <AlertCircle className="h-3 w-3" />
+              {task.error}
+            </p>
+          )}
         </div>
-      )}
+        <div>
+          {task.imageUrls.length > 0 ? (
+            <div className="task-preview-grid">
+              {task.imageUrls.map((url, i) => (
+                <img
+                  key={i}
+                  src={url}
+                  alt={`Generated ${i}`}
+                  className="h-24 w-full rounded-lg border border-zinc-700 object-cover"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-28 items-center justify-center rounded-2xl border border-dashed border-zinc-700 px-4 text-center text-xs text-zinc-500">
+              输出预览会在任务完成后显示在这里。
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ── Server task card (from DB) ── */
 function ServerTaskCard({ task }: { task: TaskWithAssets }) {
-  const statusColors: Record<string, string> = {
-    queued: "text-zinc-400 bg-zinc-800",
-    running: "text-blue-400 bg-blue-500/10",
-    success: "text-green-400 bg-green-500/10",
-    failed: "text-red-400 bg-red-500/10",
-  };
-  const statusLabels: Record<string, string> = {
-    queued: "排队中",
-    running: "生成中",
-    success: "已完成",
-    failed: "失败",
-  };
-
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "rounded-full px-2 py-0.5 text-xs font-medium",
-              statusColors[task.status] || statusColors.queued
-            )}
-          >
-            {task.status === "running" && (
-              <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
-            )}
-            {statusLabels[task.status] || task.status}
-          </span>
-          <span className="text-xs text-zinc-600">
-            {task.width}×{task.height}
-          </span>
-          {task.batchSize > 1 && (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
+      <div className="task-card-grid">
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className={cn(statusClassNames[task.status] || statusClassNames.queued)}>
+                {task.status === "running" && (
+                  <Loader2 className="mr-1 inline h-3 w-3 animate-spin" />
+                )}
+                {statusLabels[task.status] || task.status}
+              </span>
+            </div>
             <span className="text-xs text-zinc-600">
-              ×{task.batchSize}
+              {new Date(task.createdAt).toLocaleString()}
             </span>
+          </div>
+          <p className="mb-3 text-sm leading-6 text-zinc-300">{task.prompt}</p>
+          <div className="meta-row">
+            <span className="meta-chip">尺寸: {task.width}×{task.height}</span>
+            <span className="meta-chip">批量: {task.batchSize}</span>
+            <span className="meta-chip">产出: {task.assets.length}</span>
+            {task.seed !== null && <span className="meta-chip">Seed: {task.seed}</span>}
+          </div>
+          {task.errorMessage && (
+            <p className="mt-3 flex items-center gap-1 text-xs text-red-400">
+              <AlertCircle className="h-3 w-3" />
+              {task.errorMessage}
+            </p>
+          )}
+          {task.assets.length === 0 && task.status === "success" && (
+            <p className="mt-3 flex items-center gap-1 text-xs text-zinc-500">
+              <ImageIcon className="h-3 w-3" />
+              任务已完成，但没有可展示的生成结果。
+            </p>
           )}
         </div>
-        <span className="text-xs text-zinc-600">
-          {new Date(task.createdAt).toLocaleString()}
-        </span>
-      </div>
-      <p className="mb-2 text-sm text-zinc-300 line-clamp-2">{task.prompt}</p>
-      {task.errorMessage && (
-        <p className="flex items-center gap-1 text-xs text-red-400">
-          <AlertCircle className="h-3 w-3" />
-          {task.errorMessage}
-        </p>
-      )}
-      {task.assets.length > 0 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto">
-          {task.assets.map((asset) => (
-            <img
-              key={asset.id}
-              src={asset.processedUrl || asset.originalUrl}
-              alt={asset.filename}
-              className="h-24 w-24 rounded-lg border border-zinc-700 object-cover"
-            />
-          ))}
+        <div>
+          {task.assets.length > 0 ? (
+            <div className="task-preview-grid">
+              {task.assets.map((asset) => (
+                <img
+                  key={asset.id}
+                  src={asset.processedUrl || asset.originalUrl}
+                  alt={asset.filename}
+                  className="h-24 w-full rounded-lg border border-zinc-700 object-cover"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full min-h-28 items-center justify-center rounded-2xl border border-dashed border-zinc-700 px-4 text-center text-xs text-zinc-500">
+              当前任务还没有关联素材预览。
+            </div>
+          )}
         </div>
-      )}
-      {task.assets.length === 0 && task.status === "success" && (
-        <p className="mt-2 flex items-center gap-1 text-xs text-zinc-500">
-          <ImageIcon className="h-3 w-3" />
-          无生成结果
-        </p>
-      )}
+      </div>
     </div>
   );
 }

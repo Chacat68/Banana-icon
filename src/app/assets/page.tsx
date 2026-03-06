@@ -10,7 +10,6 @@ import {
   Upload,
   X,
   CheckCircle2,
-  AlertCircle,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -160,8 +159,11 @@ export default function AssetsPage() {
       (a.tags && a.tags.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const taggedCount = assets.filter((asset) => Boolean(asset.tags?.trim())).length;
+  const readyCount = assets.filter((asset) => Boolean(asset.processedUrl || asset.originalUrl)).length;
+
   return (
-    <div className="flex h-full">
+    <div className="page-shell page-shell-wide">
       {/* Batch Import Modal */}
       {showImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -338,10 +340,39 @@ export default function AssetsPage() {
         </div>
       )}
 
-      {/* Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mb-6 flex items-center gap-4">
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+      <div className="content-grid">
+        <div className="hero-banner">
+          <div>
+            <p className="hero-kicker">Asset Library</p>
+            <h1 className="hero-title font-display">把素材库从缩略图墙改成可检索、可筛看的资产架。</h1>
+            <p className="hero-copy">
+              左侧专注于浏览和筛选，右侧专注于单个素材的上下文。这样你能更快判断一个素材来自什么提示词、是否值得继续复用，以及它在库里的状态。
+            </p>
+          </div>
+          <div className="mini-stat-grid">
+            <div className="mini-stat">
+              <div className="mini-stat-label">库中总数</div>
+              <div className="mini-stat-value font-display">{assets.length}</div>
+              <div className="mini-stat-note">已导入或生成的全部素材</div>
+            </div>
+            <div className="mini-stat">
+              <div className="mini-stat-label">当前结果</div>
+              <div className="mini-stat-value font-display">{filtered.length}</div>
+              <div className="mini-stat-note">符合搜索条件的资产</div>
+            </div>
+            <div className="mini-stat">
+              <div className="mini-stat-label">已打标签</div>
+              <div className="mini-stat-value font-display">{taggedCount}</div>
+              <div className="mini-stat-note">可继续做二次归档的素材</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="split-layout">
+          <div className="section-panel">
+            <div className="section-panel-inner">
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
             <ImageIcon className="h-5 w-5 text-yellow-400" />
             资产库
           </h1>
@@ -361,7 +392,7 @@ export default function AssetsPage() {
             <Upload className="h-4 w-4" />
             批量导入
           </button>
-          <span className="text-sm text-zinc-500">{filtered.length} 项</span>
+          <span className="text-sm text-zinc-500">{readyCount} 项可预览</span>
         </div>
 
         {loading ? (
@@ -372,16 +403,16 @@ export default function AssetsPage() {
             <p>暂无素材</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="asset-grid">
             {filtered.map((asset) => (
               <button
                 key={asset.id}
                 onClick={() => setSelectedAsset(asset)}
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border bg-zinc-900 transition-colors",
+                  "asset-tile group relative text-left",
                   selectedAsset?.id === asset.id
-                    ? "border-yellow-500"
-                    : "border-zinc-800 hover:border-zinc-600"
+                    ? "asset-tile-active"
+                    : ""
                 )}
               >
                 <div className="aspect-square bg-zinc-800">
@@ -391,27 +422,37 @@ export default function AssetsPage() {
                     className="h-full w-full object-contain"
                   />
                 </div>
-                <div className="p-2">
-                  <p className="truncate text-xs text-zinc-400">{asset.prompt}</p>
-                  <p className="text-[10px] text-zinc-600">
+                <div className="p-3">
+                  <p className="line-clamp-2 min-h-10 text-xs text-zinc-400">{asset.prompt}</p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-600">
+                    <span>
                     {asset.width}×{asset.height}
-                  </p>
+                    </span>
+                    <span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+                  </div>
                 </div>
               </button>
             ))}
           </div>
         )}
-      </div>
+            </div>
+          </div>
 
-      {/* Detail sidebar */}
-      {selectedAsset && (
-        <div className="w-80 shrink-0 overflow-y-auto border-l border-zinc-800 bg-zinc-900 p-4">
+          <div className="section-panel detail-panel">
+            <div className="section-panel-inner">
+      {selectedAsset ? (
+        <>
           <div className="mb-4 aspect-square overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800">
             <img
               src={selectedAsset.processedUrl || selectedAsset.originalUrl}
               alt={selectedAsset.prompt}
               className="h-full w-full object-contain"
             />
+          </div>
+
+          <div className="mb-3">
+            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">当前选中</div>
+            <h3 className="mt-2 text-lg font-semibold">素材详情</h3>
           </div>
 
           <h3 className="mb-1 text-sm font-medium">Prompt</h3>
@@ -465,8 +506,18 @@ export default function AssetsPage() {
               <Trash2 className="h-3.5 w-3.5" /> 删除
             </button>
           </div>
+        </>
+      ) : (
+        <div className="flex min-h-96 flex-col items-center justify-center text-center text-zinc-500">
+          <ImageIcon className="mb-4 h-10 w-10 text-zinc-700" />
+          <p className="text-sm text-zinc-400">从左侧选择一个素材查看详情。</p>
+          <p className="mt-2 max-w-xs text-xs text-zinc-500">详情面板会显示提示词、标签、尺寸和操作按钮，方便你继续整理资产库。</p>
         </div>
       )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
