@@ -1,10 +1,10 @@
-import { drizzle as drizzleD1, DrizzleD1Database } from "drizzle-orm/d1";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 
-export type Database = DrizzleD1Database<typeof schema>;
+let localDb: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let localDb: any = null;
+export type Database = NonNullable<typeof localDb>;
 
 const INIT_SQL = `
 CREATE TABLE IF NOT EXISTS projects (
@@ -49,34 +49,19 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `;
 
-export function getDb(d1: D1Database): Database {
-  return drizzleD1(d1, { schema });
-}
-
-/**
- * Get database – tries Cloudflare D1 first, falls back to local better-sqlite3.
- */
+/** Get the local SQLite database used for single-user development. */
 export async function getDbFromContext() {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const { env } = await getCloudflareContext();
-    return getDb((env as { DB: D1Database }).DB);
-  } catch {
-    // Local dev fallback: use better-sqlite3
-    if (!localDb) {
-      const Database = (await import("better-sqlite3")).default;
-      const { drizzle } = await import("drizzle-orm/better-sqlite3");
-      const sqlite = new Database("local.db");
-      sqlite.pragma("journal_mode = WAL");
-      sqlite.pragma("foreign_keys = ON");
-      sqlite.exec(INIT_SQL);
-      try {
-        sqlite.exec("ALTER TABLE generation_tasks ADD COLUMN upstream_task_id TEXT");
-      } catch {
-        // Ignore if the column already exists in an existing local database.
-      }
-      localDb = drizzle(sqlite, { schema });
+  if (!localDb) {
+    const sqlite = new Database("local.db");
+    sqlite.pragma("journal_mode = WAL");
+    sqlite.pragma("foreign_keys = ON");
+    sqlite.exec(INIT_SQL);
+    try {
+      sqlite.exec("ALTER TABLE generation_tasks ADD COLUMN upstream_task_id TEXT");
+    } catch {
+      // Ignore if the column already exists in an existing local database.
     }
-    return localDb;
+    localDb = drizzle(sqlite, { schema });
   }
+  return localDb;
 }

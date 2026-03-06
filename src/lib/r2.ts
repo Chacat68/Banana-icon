@@ -1,6 +1,5 @@
 /**
- * Helper to upload/delete files on Cloudflare R2.
- * Falls back to local filesystem when R2 is not available (local dev).
+ * Local file storage helper used in single-user development.
  */
 
 import { existsSync, mkdirSync, writeFileSync, unlinkSync, readFileSync } from "fs";
@@ -15,13 +14,7 @@ function ensureLocalDir() {
 }
 
 async function getR2Bucket(): Promise<R2Bucket | null> {
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const { env } = await getCloudflareContext();
-    return (env as { ASSETS_BUCKET: R2Bucket }).ASSETS_BUCKET;
-  } catch {
-    return null;
-  }
+  return null;
 }
 
 export async function uploadToR2(
@@ -29,12 +22,7 @@ export async function uploadToR2(
   data: ArrayBuffer | ReadableStream | Blob,
   contentType = "image/png"
 ): Promise<string> {
-  const bucket = await getR2Bucket();
-  if (bucket) {
-    await bucket.put(key, data, { httpMetadata: { contentType } });
-    return `/assets/${key}`;
-  }
-  // Local fallback: write to public/uploads/
+  void contentType;
   ensureLocalDir();
   const fileName = key.replace(/\//g, "_");
   const filePath = join(LOCAL_UPLOAD_DIR, fileName);
@@ -48,23 +36,22 @@ export async function uploadToR2(
 }
 
 export async function deleteFromR2(key: string): Promise<void> {
-  const bucket = await getR2Bucket();
-  if (bucket) {
-    await bucket.delete(key);
-    return;
-  }
   const fileName = key.replace(/\//g, "_");
   const filePath = join(LOCAL_UPLOAD_DIR, fileName);
   if (existsSync(filePath)) unlinkSync(filePath);
 }
 
-export async function getFromR2(key: string): Promise<R2ObjectBody | null> {
-  const bucket = await getR2Bucket();
-  if (bucket) return bucket.get(key);
+export async function getFromR2(key: string): Promise<{ body: ReadableStream<Uint8Array> } | null> {
   const fileName = key.replace(/\//g, "_");
   const filePath = join(LOCAL_UPLOAD_DIR, fileName);
   if (!existsSync(filePath)) return null;
-  // Return a minimal compatible object for local dev
   const data = readFileSync(filePath);
-  return { body: new ReadableStream({ start(c) { c.enqueue(data); c.close(); } }), arrayBuffer: () => Promise.resolve(data.buffer) } as unknown as R2ObjectBody;
+  return {
+    body: new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(data));
+        controller.close();
+      },
+    }),
+  };
 }
