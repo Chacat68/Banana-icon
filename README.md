@@ -48,6 +48,8 @@ npm run local
 
 默认地址：`http://localhost:3000`
 
+如果 `.env` 里仍是默认占位值，Windows 启动脚本和 `npm run local` 会在启动前提示你去填写 Nano Banana 的 API URL 和 API Key。
+
 ## Windows 启动脚本
 
 `start.bat` 和 `scripts/start-local.ps1` 会自动执行这些步骤：

@@ -2,32 +2,73 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { assets } from "@/lib/schema";
 import { deleteStoredAsset } from "@/lib/asset-storage";
-import { eq, desc } from "drizzle-orm";
+import { and, desc, eq, like, or, sql, type SQL } from "drizzle-orm";
+
+function combineConditions(...conditions: Array<SQL | undefined>) {
+  const activeConditions = conditions.filter((condition): condition is SQL => Boolean(condition));
+  if (activeConditions.length === 0) {
+    return undefined;
+  }
+
+  return and(...activeConditions);
+}
 
 /** GET /api/assets — List assets with optional filters */
 export async function GET(req: NextRequest) {
   const db = await getDbFromContext();
   const projectId = req.nextUrl.searchParams.get("projectId");
   const tag = req.nextUrl.searchParams.get("tag");
+  const queryText = req.nextUrl.searchParams.get("q")?.trim() || "";
   const parsed = Number(req.nextUrl.searchParams.get("limit") || 50);
+  const parsedOffset = Number(req.nextUrl.searchParams.get("offset") || 0);
   const take = Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, 200) : 50;
+  const offset = Number.isFinite(parsedOffset) && parsedOffset >= 0 ? parsedOffset : 0;
 
-  const query = db
+  const baseWhere = combineConditions(
+    projectId ? eq(assets.projectId, projectId) : undefined,
+    tag ? like(assets.tags, `%${tag}%`) : undefined,
+    queryText
+      ? or(
+          like(assets.prompt, `%${queryText}%`),
+          like(assets.tags, `%${queryText}%`)
+        )
+      : undefined
+  );
+
+  const rows = await db
     .select()
     .from(assets)
-    .where(projectId ? eq(assets.projectId, projectId) : undefined)
+    .where(baseWhere)
     .orderBy(desc(assets.createdAt))
-    .limit(take);
+    .limit(take)
+    .offset(offset);
 
-  const rows = await query;
+  const [{ count: totalCount }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(assets)
+    .where(baseWhere);
 
-  const result = tag
-    ? rows.filter(
-        (a: { tags: string | null }) => a.tags && a.tags.toLowerCase().includes(tag.toLowerCase())
-      )
-    : rows;
+  const [{ count: taggedCount }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(assets)
+    .where(
+      combineConditions(baseWhere, sql`${assets.tags} is not null and trim(${assets.tags}) <> ''`)
+    );
 
-  return NextResponse.json(result);
+  return NextResponse.json({
+    items: rows,
+    pagination: {
+      offset,
+      limit: take,
+      total: Number(totalCount),
+      hasMore: offset + rows.length < Number(totalCount),
+    },
+    stats: {
+      total: Number(totalCount),
+      tagged: Number(taggedCount),
+      ready: Number(totalCount),
+    },
+  });
 }
 
 /** DELETE /api/assets?id=xxx — Delete a single asset */
