@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { generationTasks, assets } from "@/lib/schema";
-import { getGenerationStatus } from "@/lib/nano-banana";
+import { getGenerationStatus, mapUpstreamStatus } from "@/lib/nano-banana";
 import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -27,7 +27,9 @@ export async function GET(
   // If still running, poll the upstream API
   if (task.status === "running" || task.status === "queued") {
     try {
-      const result = await getGenerationStatus(taskId, clientKey);
+      const upstreamTaskId = task.upstreamTaskId || taskId;
+      const result = await getGenerationStatus(upstreamTaskId, clientKey);
+      const nextStatus = mapUpstreamStatus(result.status);
       if (result.status === "completed" && result.images) {
         // Idempotent: re-check task status to prevent duplicate asset insertion
         const [current] = await db.select().from(generationTasks)
@@ -35,7 +37,12 @@ export async function GET(
         if (current && current.status !== "success") {
           await db
             .update(generationTasks)
-            .set({ status: "success", updatedAt: new Date().toISOString() })
+            .set({
+              upstreamTaskId,
+              status: "success",
+              errorMessage: null,
+              updatedAt: new Date().toISOString(),
+            })
             .where(eq(generationTasks.id, taskId));
           for (const img of result.images) {
             await db.insert(assets).values({
@@ -67,8 +74,19 @@ export async function GET(
         await db
           .update(generationTasks)
           .set({
+            upstreamTaskId,
             status: "failed",
             errorMessage: result.error || "Generation failed",
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(generationTasks.id, taskId));
+      } else {
+        await db
+          .update(generationTasks)
+          .set({
+            upstreamTaskId,
+            status: nextStatus,
+            errorMessage: null,
             updatedAt: new Date().toISOString(),
           })
           .where(eq(generationTasks.id, taskId));

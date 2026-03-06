@@ -21,6 +21,21 @@ export interface GenerateImageResult {
   error?: string;
 }
 
+export function mapUpstreamStatus(
+  status: GenerateImageResult["status"]
+): "queued" | "running" | "success" | "failed" {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "failed":
+      return "failed";
+    case "pending":
+    case "processing":
+    default:
+      return "running";
+  }
+}
+
 const ENV_API_URL = process.env.NANO_BANANA_API_URL || "";
 const ENV_API_KEY = process.env.NANO_BANANA_API_KEY || "";
 

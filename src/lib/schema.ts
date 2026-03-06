@@ -27,6 +27,7 @@ export const styleProfiles = sqliteTable("style_profiles", {
 
 export const generationTasks = sqliteTable("generation_tasks", {
   id: text("id").primaryKey(),
+  upstreamTaskId: text("upstream_task_id"),
   status: text("status").default("queued").notNull(),
   prompt: text("prompt").notNull(),
   negativePrompt: text("negative_prompt"),

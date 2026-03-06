@@ -227,7 +227,7 @@ export default function SettingsPage() {
             <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-5">
               <h3 className="mb-2 text-xs font-medium text-zinc-400">说明</h3>
               <ul className="space-y-1 text-xs text-zinc-500">
-                <li>• API Key 仅保存在浏览器本地（localStorage），不会上传至服务器或云端</li>
+                <li>• API Key 仅保存在浏览器本地（localStorage），不会写入数据库，但会通过请求头转发给服务端代理上游请求</li>
                 <li>• 清除浏览器数据会丢失 API Key，请妥善保管原始密钥</li>
                 <li>• API URL 保存在服务端数据库中，多设备共享</li>
                 <li>• 也可通过环境变量 NANO_BANANA_API_KEY 和 NANO_BANANA_API_URL 作为默认值</li>
@@ -245,7 +245,7 @@ export default function SettingsPage() {
             <div className="editor-panel-title mb-4">配置说明</div>
             <div className="editor-surface">
               <div className="editor-block-label">密钥策略</div>
-              <p className="editor-help">API Key 只保存在当前浏览器的 localStorage，不会写入数据库或上传到服务端。</p>
+              <p className="editor-help">API Key 只保存在当前浏览器的 localStorage，不会写入数据库；服务端仅在代理上游请求时读取请求头中的密钥。</p>
             </div>
             <div className="editor-surface mt-3">
               <div className="editor-block-label">URL 策略</div>

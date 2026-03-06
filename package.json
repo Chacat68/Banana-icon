@@ -13,8 +13,8 @@
     "deploy": "opennextjs-cloudflare build && wrangler pages deploy",
     "cf:build": "opennextjs-cloudflare build",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 execute banana-icon-db --file=./migrations/0001_init.sql && wrangler d1 execute banana-icon-db --file=./migrations/0002_add_reference_image.sql && wrangler d1 execute banana-icon-db --file=./migrations/0003_add_settings.sql",
-    "db:migrate:local": "wrangler d1 execute banana-icon-db --local --file=./migrations/0001_init.sql && wrangler d1 execute banana-icon-db --local --file=./migrations/0002_add_reference_image.sql && wrangler d1 execute banana-icon-db --local --file=./migrations/0003_add_settings.sql"
+    "db:migrate": "wrangler d1 execute banana-icon-db --file=./migrations/0001_init.sql && wrangler d1 execute banana-icon-db --file=./migrations/0002_add_reference_image.sql && wrangler d1 execute banana-icon-db --file=./migrations/0003_add_settings.sql && wrangler d1 execute banana-icon-db --file=./migrations/0004_add_upstream_task_id.sql",
+    "db:migrate:local": "wrangler d1 execute banana-icon-db --local --file=./migrations/0001_init.sql && wrangler d1 execute banana-icon-db --local --file=./migrations/0002_add_reference_image.sql && wrangler d1 execute banana-icon-db --local --file=./migrations/0003_add_settings.sql && wrangler d1 execute banana-icon-db --local --file=./migrations/0004_add_upstream_task_id.sql"
   },
   "keywords": [],
   "author": "",
