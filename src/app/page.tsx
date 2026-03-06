@@ -169,7 +169,10 @@ export default function GeneratePage() {
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getApiKeyHeaders() },
+        headers: {
+          "Content-Type": "application/json",
+          ...getApiKeyHeaders(),
+        },
         body: JSON.stringify({
           projectId: selectedProject,
           subject: subjectText,
