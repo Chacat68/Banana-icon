@@ -3,7 +3,7 @@ import { analyzeImage } from "@/lib/nano-banana";
 import { isValidExternalUrl } from "@/lib/utils";
 
 function resolveAnalyzeUrl(req: NextRequest, rawUrl: string): string | null {
-  if (rawUrl.startsWith("/uploads/") || rawUrl.startsWith("/assets/")) {
+  if (rawUrl.startsWith("/uploads/")) {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
     return new URL(rawUrl, baseUrl).toString();
   }

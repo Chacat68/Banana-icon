@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { assets } from "@/lib/schema";
-import { deleteFromR2 } from "@/lib/r2";
+import { deleteStoredAsset } from "@/lib/asset-storage";
 import { eq, desc } from "drizzle-orm";
 
 /** GET /api/assets — List assets with optional filters */
@@ -44,14 +44,12 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Asset not found" }, { status: 404 });
   }
 
-  // Delete from object storage (R2 or local)
+  // Delete from local asset storage.
   try {
     const urlPath = asset.originalUrl;
-    // Convert URL back to storage key: "/assets/xxx" -> "xxx", "/uploads/xxx" -> "ref/xxx" (local)
-    if (urlPath.startsWith("/assets/")) {
-      await deleteFromR2(urlPath.slice("/assets/".length));
-    } else if (urlPath.startsWith("/uploads/")) {
-      await deleteFromR2(urlPath.slice("/uploads/".length));
+    // Convert URL back to the stored filename key.
+    if (urlPath.startsWith("/uploads/")) {
+      await deleteStoredAsset(urlPath.slice("/uploads/".length));
     }
   } catch (err) {
     console.error("[assets] failed to delete from storage:", err);

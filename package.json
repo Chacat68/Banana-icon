@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "next dev",
     "local": "node scripts/start-local.mjs",
+    "start:win": "powershell -ExecutionPolicy Bypass -File scripts/start-local.ps1",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node scripts/migrate-local.mjs",
-    "db:migrate:local": "node scripts/migrate-local.mjs"
+    "db:migrate": "node scripts/migrate-local.mjs"
   },
   "keywords": [],
   "author": "",
