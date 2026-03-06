@@ -140,36 +140,51 @@ export default function StylesPage() {
   const negativeCount = profiles.filter((profile) => Boolean(profile.negativeWords?.trim())).length;
 
   return (
-    <div className="page-shell page-shell-wide">
-      <div className="content-grid">
-        <div className="hero-banner">
-          <div>
-            <p className="hero-kicker">Style Index</p>
-            <h1 className="hero-title font-display">把风格模板整理成可复用的视觉词典。</h1>
-            <p className="hero-copy">
-              风格页不只是存几条 prompt，而是把参考图、正负词和项目归属收进同一份模板卡片里，方便你快速复用，减少每次重新拼提示词的成本。
-            </p>
-          </div>
-          <div className="mini-stat-grid">
-            <div className="mini-stat">
-              <div className="mini-stat-label">模板数量</div>
-              <div className="mini-stat-value font-display">{profiles.length}</div>
-              <div className="mini-stat-note">已经保存的风格方案</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">带参考图</div>
-              <div className="mini-stat-value font-display">{referencedCount}</div>
-              <div className="mini-stat-note">有视觉锚点可快速复刻</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">负面词模板</div>
-              <div className="mini-stat-value font-display">{negativeCount}</div>
-              <div className="mini-stat-note">已经补充避坑约束的模板</div>
-            </div>
+    <div className="page-shell page-shell-wide editor-page">
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">Style Browser</div>
+          <div className="editor-toolbar-title">
+            <Palette className="h-4 w-4 text-yellow-400" />
+            风格模板库
           </div>
         </div>
+        <div className="editor-toolbar-group">
+          <span className="editor-chip">Profiles: {profiles.length}</span>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-1 rounded-lg bg-yellow-500 px-3 py-2 text-sm font-medium text-black hover:bg-yellow-400"
+          >
+            <Plus className="h-4 w-4" />
+            {showForm ? "收起表单" : "新建风格"}
+          </button>
+        </div>
+      </div>
 
-        <div className="section-panel">
+      <div className="editor-stat-strip">
+        <div className="editor-stat">
+          <div className="editor-stat-title">模板数量</div>
+          <div className="editor-stat-value font-display">{profiles.length}</div>
+          <div className="editor-stat-note">已经保存的风格方案</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">带参考图</div>
+          <div className="editor-stat-value font-display">{referencedCount}</div>
+          <div className="editor-stat-note">有视觉锚点可快速复刻</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">负面词模板</div>
+          <div className="editor-stat-value font-display">{negativeCount}</div>
+          <div className="editor-stat-note">已经补充避坑约束的模板</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">项目来源</div>
+          <div className="editor-stat-value font-display">{projects.length}</div>
+          <div className="editor-stat-note">可挂载模板的项目数量</div>
+        </div>
+      </div>
+
+      <div className="section-panel">
           <div className="section-panel-inner">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -404,7 +419,6 @@ export default function StylesPage() {
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }

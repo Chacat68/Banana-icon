@@ -126,52 +126,23 @@ export default function TasksPage() {
   ).length;
 
   return (
-    <div className="page-shell page-shell-wide">
-      <div className="content-grid mx-auto max-w-5xl">
-        <div className="hero-banner">
-          <div>
-            <p className="hero-kicker">Task Ledger</p>
-            <h1 className="hero-title font-display">把队列、结果和异常都放在一张任务看板里。</h1>
-            <p className="hero-copy">
-              这里不只显示历史记录。它把当前会话中的本地任务、服务端任务和最终产出统一放在一个可刷新的时间线里，方便你盯住卡住的请求和刚完成的结果。
-            </p>
-          </div>
-          <div className="mini-stat-grid">
-            <div className="mini-stat">
-              <div className="mini-stat-label">处理中</div>
-              <div className="mini-stat-value font-display">{runningCount}</div>
-              <div className="mini-stat-note">正在排队或生成中的任务</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">已完成</div>
-              <div className="mini-stat-value font-display">{successCount}</div>
-              <div className="mini-stat-note">已经拿到结果图的任务</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">异常</div>
-              <div className="mini-stat-value font-display">{failedCount}</div>
-              <div className="mini-stat-note">需要重新生成或检查配置</div>
-            </div>
+    <div className="page-shell page-shell-wide editor-page">
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">Task Monitor</div>
+          <div className="editor-toolbar-title">
+            <Sparkles className="h-4 w-4 text-yellow-400" />
+            生成任务监视器
           </div>
         </div>
-
-        <div className="section-panel">
-          <div className="section-panel-inner">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              返回生成
-            </Link>
-            <h1 className="text-xl font-semibold flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-yellow-400" />
-              生成任务
-            </h1>
-          </div>
+        <div className="editor-toolbar-group">
+          <Link
+            href="/"
+            className="flex items-center gap-1 rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            返回生成
+          </Link>
           <button
             onClick={loadTasks}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
@@ -179,6 +150,43 @@ export default function TasksPage() {
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
             刷新
           </button>
+        </div>
+      </div>
+
+      <div className="editor-stat-strip">
+        <div className="editor-stat">
+          <div className="editor-stat-title">处理中</div>
+          <div className="editor-stat-value font-display">{runningCount}</div>
+          <div className="editor-stat-note">正在排队或生成中的任务</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">已完成</div>
+          <div className="editor-stat-value font-display">{successCount}</div>
+          <div className="editor-stat-note">已经拿到结果图的任务</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">异常</div>
+          <div className="editor-stat-value font-display">{failedCount}</div>
+          <div className="editor-stat-note">需要重新生成或检查配置</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">本地会话</div>
+          <div className="editor-stat-value font-display">{localTasks.length}</div>
+          <div className="editor-stat-note">当前浏览器会话缓存中的任务</div>
+        </div>
+      </div>
+
+      <div className="section-panel">
+        <div className="section-panel-inner">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-yellow-400" />
+              生成任务
+            </h1>
+          </div>
+          <span className="editor-chip">Queue View</span>
         </div>
 
         {/* Local tasks (in-progress) */}
@@ -224,7 +232,6 @@ export default function TasksPage() {
             </div>
           )}
         </div>
-          </div>
         </div>
       </div>
     </div>

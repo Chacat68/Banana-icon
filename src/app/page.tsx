@@ -243,34 +243,22 @@ export default function GeneratePage() {
     },
   ];
 
-  return (
-    <div className="page-shell">
-      <div className="hero-banner">
-        <div>
-          <p className="hero-kicker">Banana Icon Studio</p>
-          <h1 className="hero-title font-display">把提示词、风格参考和项目资产放进同一张工作台。</h1>
-          <p className="hero-copy">
-            这一版界面把重心放在创作流程本身。你不再只是填写表单，而是在一个可持续切换项目、批量修订和追踪任务的制作台上工作。
-          </p>
-        </div>
-        <div className="hero-metrics">
-          {quickStats.map((item) => (
-            <div key={item.label} className="metric-card">
-              <div className="metric-label">{item.label}</div>
-              <div className="metric-value font-display">{item.value}</div>
-              <div className="metric-note">{item.note}</div>
-            </div>
-          ))}
-        </div>
-      </div>
+  const activeProjectName =
+    projects.find((project) => project.id === selectedProject)?.name || "未选择项目";
 
-      <div className="mx-auto max-w-3xl workbench-card p-6 sm:p-8">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Sparkles className="h-5 w-5 text-yellow-400" />
-            生成工作台
-          </h1>
+  return (
+    <div className="page-shell editor-page">
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">Generator Workspace</div>
+          <div className="editor-toolbar-title">
+            <Sparkles className="h-4 w-4 text-yellow-400" />
+            生成编辑器
+          </div>
+        </div>
+        <div className="editor-toolbar-group">
+          <span className="editor-chip">Project: {activeProjectName}</span>
+          <span className="editor-chip">Mode: {batchMode ? "Batch" : "Single"}</span>
           <Link
             href="/tasks"
             className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
@@ -284,25 +272,35 @@ export default function GeneratePage() {
             )}
           </Link>
         </div>
+      </div>
 
-        <div className="mb-6 grid gap-3 rounded-2xl border border-white/60 bg-white/40 p-4 sm:grid-cols-3">
-          <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">流程</div>
-            <div className="mt-2 text-sm text-zinc-400">先选项目，再设定模式和输出规格。</div>
+      <div className="editor-stat-strip">
+        {quickStats.map((item) => (
+          <div key={item.label} className="editor-stat">
+            <div className="editor-stat-title">{item.label}</div>
+            <div className="editor-stat-value font-display">{item.value}</div>
+            <div className="editor-stat-note">{item.note}</div>
           </div>
-          <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">参考</div>
-            <div className="mt-2 text-sm text-zinc-400">拖入参考图可稳定风格，批量模式适合旧素材翻新。</div>
-          </div>
-          <div>
-            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">结果</div>
-            <div className="mt-2 text-sm text-zinc-400">新任务会即时进入队列，并同步显示在最近任务面板里。</div>
-          </div>
+        ))}
+        <div className="editor-stat">
+          <div className="editor-stat-title">参考图</div>
+          <div className="editor-stat-value font-display">{referenceImagePreview ? "1" : "0"}</div>
+          <div className="editor-stat-note">风格参考图当前挂载状态</div>
         </div>
+      </div>
 
-        {/* Project selector */}
-        <label className="mb-1 block text-sm text-zinc-400">项目</label>
-        <div className="mb-4 flex gap-2">
+      <div className="editor-panels editor-panels-home">
+        <section className="editor-panel">
+          <div className="editor-panel-header">
+            <div>
+              <div className="editor-panel-subtitle">Session</div>
+              <div className="editor-panel-title">工作流设置</div>
+            </div>
+          </div>
+          <div className="editor-panel-body editor-stack">
+            <div>
+              <label className="editor-block-label">项目</label>
+              <div className="flex gap-2">
           {showNewProject ? (
             <>
               <input
@@ -350,131 +348,151 @@ export default function GeneratePage() {
               </button>
             </>
           )}
-        </div>
-
-        {/* Mode toggle */}
-        <div className="mb-4 flex items-center gap-2">
-          <button
-            onClick={() => setBatchMode(false)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              !batchMode
-                ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500"
-                : "border border-zinc-700 text-zinc-400 hover:border-zinc-500"
-            )}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            单个生成
-          </button>
-          <button
-            onClick={() => setBatchMode(true)}
-            className={cn(
-              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-              batchMode
-                ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500"
-                : "border border-zinc-700 text-zinc-400 hover:border-zinc-500"
-            )}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            批量模式
-          </button>
-        </div>
-
-        {/* Subject */}
-        <label className="mb-1 block text-sm text-zinc-400">素材描述 *</label>
-        <textarea
-          className="mb-4 w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-yellow-500"
-          rows={3}
-          placeholder="例如：一把发光的蓝色魔法剑、一个可爱的史莱姆怪物"
-          value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-        />
-
-        {/* Batch file picker */}
-        {batchMode && (
-          <>
-            <label className="mb-1 block text-sm text-zinc-400">选择要修改的素材 *</label>
-            <input
-              ref={batchFileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              multiple
-              onChange={handleBatchFilesSelected}
-              className="hidden"
-            />
-            <button
-              onClick={() => batchFileInputRef.current?.click()}
-              className="mb-2 w-full rounded-lg border-2 border-dashed border-zinc-700 px-4 py-4 text-sm text-zinc-400 transition-colors hover:border-yellow-500/50 hover:text-zinc-300"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <FolderOpen className="h-5 w-5" />
-                {batchFiles.length > 0
-                  ? `已选择 ${batchFiles.length} 个素材，点击继续添加`
-                  : "点击选择素材图片 (PNG, JPG, WebP, GIF)"}
               </div>
-            </button>
-            {batchFiles.length > 0 && (
-              <>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs text-zinc-500">{batchFiles.length} 个文件</span>
-                  <button
-                    onClick={clearBatchFiles}
-                    className="text-xs text-zinc-500 hover:text-red-400"
-                  >
-                    清空全部
-                  </button>
-                </div>
-                <div className="mb-4 grid grid-cols-6 gap-2">
-                  {batchFiles.map((item, i) => (
-                    <div key={i} className="group relative">
-                      <div className="aspect-square overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800">
-                        <img
-                          src={item.preview}
-                          alt={item.file.name}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <button
-                        onClick={() => removeBatchFile(i)}
-                        className="absolute -right-1 -top-1 hidden rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-red-400 group-hover:block"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                      <p className="mt-0.5 truncate text-[10px] text-zinc-600">{item.file.name}</p>
-                    </div>
+            </div>
+
+            <div>
+              <label className="editor-block-label">模式</label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setBatchMode(false)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    !batchMode
+                      ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500"
+                      : "border border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                  )}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  单个生成
+                </button>
+                <button
+                  onClick={() => setBatchMode(true)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    batchMode
+                      ? "bg-yellow-500/10 text-yellow-400 border border-yellow-500"
+                      : "border border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                  )}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  批量模式
+                </button>
+              </div>
+            </div>
+
+            <div className="editor-three-col">
+              <div>
+                <label className="editor-block-label">背景</label>
+                <select
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-2 text-xs outline-none"
+                  value={background}
+                  onChange={(e) => setBackground(e.target.value)}
+                >
+                  {BACKGROUND_OPTIONS.map((b) => (
+                    <option key={b} value={b}>{b}</option>
                   ))}
-                </div>
-              </>
-            )}
-            {batchFiles.length === 0 && (
-              <p className="mb-4 text-xs text-zinc-600">每个素材将作为参考图，使用相同的提示词生成新版本</p>
-            )}
-          </>
-        )}
+                </select>
+              </div>
+              <div>
+                <label className="editor-block-label">尺寸</label>
+                <select
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-2 text-xs outline-none"
+                  value={`${size.w}x${size.h}`}
+                  onChange={(e) => {
+                    const s = SIZES.find((s) => `${s.w}x${s.h}` === e.target.value);
+                    if (s) setSize(s);
+                  }}
+                >
+                  {SIZES.map((s) => (
+                    <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="editor-block-label">批量数量</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={8}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-2 text-xs outline-none"
+                  value={batchSize}
+                  onChange={(e) => setBatchSize(Math.min(8, Math.max(1, Number(e.target.value))))}
+                />
+              </div>
+            </div>
 
-        {/* Style */}
-        <label className="mb-1 block text-sm text-zinc-400">风格预设</label>
-        <div className="mb-4 flex flex-wrap gap-2">
-          {STYLE_PRESETS.map((preset) => (
-            <button
-              key={preset.value}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs transition-colors",
-                style === preset.value
-                  ? "border-yellow-500 bg-yellow-500/10 text-yellow-400"
-                  : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
-              )}
-              onClick={() => setStyle(preset.value)}
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
+            <div className="editor-surface">
+              <div className="editor-block-label">当前上下文</div>
+              <div className="editor-help">项目 {activeProjectName}，输出尺寸 {size.label}，{batchMode ? `当前将处理 ${batchFiles.length || 0} 个批量素材` : "当前为单张素材生成"}。</div>
+            </div>
+          </div>
+        </section>
 
-        {/* Reference Image */}
-        <label className="mb-1 block text-sm text-zinc-400">风格参考图</label>
-        <div
-          className="mb-4"
+        <section className="editor-panel">
+          <div className="editor-panel-header">
+            <div>
+              <div className="editor-panel-subtitle">Viewport</div>
+              <div className="editor-panel-title">Prompt Composer</div>
+            </div>
+          </div>
+          <div className="editor-panel-body editor-form-grid">
+            <div>
+              <label className="editor-block-label">素材描述</label>
+              <textarea
+                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-3 text-sm outline-none focus:border-yellow-500"
+                rows={5}
+                placeholder="例如：一把发光的蓝色魔法剑、一个可爱的史莱姆怪物"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="editor-block-label">风格预设</label>
+              <div className="flex flex-wrap gap-2">
+                {STYLE_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs transition-colors",
+                      style === preset.value
+                        ? "border-yellow-500 bg-yellow-500/10 text-yellow-400"
+                        : "border-zinc-700 text-zinc-400 hover:border-zinc-500"
+                    )}
+                    onClick={() => setStyle(preset.value)}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="editor-two-col">
+              <div>
+                <label className="editor-block-label">附加关键词</label>
+                <input
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-yellow-500"
+                  placeholder="high detail, game asset, transparent PNG"
+                  value={extras}
+                  onChange={(e) => setExtras(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="editor-block-label">负面词</label>
+                <input
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-yellow-500"
+                  placeholder="blurry, watermark, text"
+                  value={negativePrompt}
+                  onChange={(e) => setNegativePrompt(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="editor-block-label">风格参考图</label>
+              <div
+          className="mb-2"
           onDragOver={(e) => {
             e.preventDefault();
             if (!referenceImagePreview) setDraggingRef(true);
@@ -528,75 +546,70 @@ export default function GeneratePage() {
               />
             </label>
           )}
-          <p className="mt-1 text-[10px] text-zinc-600">上传参考图以提取风格提示词</p>
-        </div>
+              <p className="text-[10px] text-zinc-600">上传参考图以提取风格提示词</p>
+            </div>
 
-        {/* Background / Size / Batch */}
-        <div className="mb-4 grid grid-cols-3 gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-zinc-500">背景</label>
-            <select
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs outline-none"
-              value={background}
-              onChange={(e) => setBackground(e.target.value)}
-            >
-              {BACKGROUND_OPTIONS.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-500">尺寸</label>
-            <select
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs outline-none"
-              value={`${size.w}x${size.h}`}
-              onChange={(e) => {
-                const s = SIZES.find((s) => `${s.w}x${s.h}` === e.target.value);
-                if (s) setSize(s);
-              }}
-            >
-              {SIZES.map((s) => (
-                <option key={s.label} value={`${s.w}x${s.h}`}>{s.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-zinc-500">批量数量</label>
-            <input
-              type="number"
-              min={1}
-              max={8}
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-2 py-1.5 text-xs outline-none"
-              value={batchSize}
-              onChange={(e) => setBatchSize(Math.min(8, Math.max(1, Number(e.target.value))))}
-            />
-          </div>
-        </div>
+            {batchMode && (
+              <div>
+                <label className="editor-block-label">批量输入素材</label>
+                <input
+                  ref={batchFileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  multiple
+                  onChange={handleBatchFilesSelected}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => batchFileInputRef.current?.click()}
+                  className="mb-2 w-full rounded-lg border-2 border-dashed border-zinc-700 px-4 py-5 text-sm text-zinc-400 transition-colors hover:border-yellow-500/50 hover:text-zinc-300"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <FolderOpen className="h-5 w-5" />
+                    {batchFiles.length > 0
+                      ? `已选择 ${batchFiles.length} 个素材，点击继续添加`
+                      : "点击选择素材图片 (PNG, JPG, WebP, GIF)"}
+                  </div>
+                </button>
+                {batchFiles.length > 0 ? (
+                  <>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs text-zinc-500">{batchFiles.length} 个文件</span>
+                      <button
+                        onClick={clearBatchFiles}
+                        className="text-xs text-zinc-500 hover:text-red-400"
+                      >
+                        清空全部
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {batchFiles.map((item, i) => (
+                        <div key={i} className="group relative">
+                          <div className="aspect-square overflow-hidden rounded-lg border border-zinc-700 bg-zinc-800">
+                            <img
+                              src={item.preview}
+                              alt={item.file.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <button
+                            onClick={() => removeBatchFile(i)}
+                            className="absolute -right-1 -top-1 hidden rounded-full bg-zinc-800 p-0.5 text-zinc-400 hover:text-red-400 group-hover:block"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                          <p className="mt-0.5 truncate text-[10px] text-zinc-600">{item.file.name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-zinc-600">每个素材将作为参考图，使用相同的提示词生成新版本。</p>
+                )}
+              </div>
+            )}
 
-        {/* Extras & Negative */}
-        <div className="mb-4 grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-sm text-zinc-400">附加关键词</label>
-            <input
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-yellow-500"
-              placeholder="high detail, game asset, transparent PNG"
-              value={extras}
-              onChange={(e) => setExtras(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-zinc-400">负面词</label>
-            <input
-              className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm outline-none focus:border-yellow-500"
-              placeholder="blurry, watermark, text"
-              value={negativePrompt}
-              onChange={(e) => setNegativePrompt(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Submit */}
-        <button
+            <button
           onClick={handleSubmit}
           disabled={
             submitting ||
@@ -613,7 +626,7 @@ export default function GeneratePage() {
               ? "cursor-not-allowed bg-zinc-700 text-zinc-500"
               : "bg-yellow-500 text-black hover:bg-yellow-400"
           )}
-        >
+            >
           {submitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : batchMode ? (
@@ -626,46 +639,82 @@ export default function GeneratePage() {
             : batchMode
               ? `批量生成 (${batchFiles.length} 个素材)`
               : "开始生成"}
-        </button>
+            </button>
+          </div>
+          </div>
+        </section>
 
-        {/* Recent tasks mini preview */}
-        {tasks.length > 0 && (
-          <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-zinc-400">最近任务</h3>
-              <Link
-                href="/tasks"
-                className="text-xs text-yellow-500 hover:text-yellow-400"
-              >
-                查看全部 →
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {tasks.slice(0, 3).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center gap-3 rounded-lg bg-zinc-800/50 px-3 py-2"
-                >
-                  <span
-                    className={cn(
-                      "h-2 w-2 shrink-0 rounded-full",
-                      task.status === "queued" && "bg-zinc-500",
-                      task.status === "running" && "bg-blue-400 animate-pulse",
-                      task.status === "success" && "bg-green-400",
-                      task.status === "failed" && "bg-red-400"
-                    )}
-                  />
-                  <span className="flex-1 truncate text-xs text-zinc-300">
-                    {task.prompt}
-                  </span>
-                  <span className="shrink-0 text-[10px] text-zinc-600">
-                    {new Date(task.createdAt).toLocaleTimeString()}
-                  </span>
-                </div>
-              ))}
+        <section className="editor-panel">
+          <div className="editor-panel-header">
+            <div>
+              <div className="editor-panel-subtitle">Inspector</div>
+              <div className="editor-panel-title">运行状态</div>
             </div>
           </div>
-        )}
+          <div className="editor-panel-body editor-stack">
+            <div className="editor-surface">
+              <div className="editor-block-label">场景摘要</div>
+              <div className="space-y-2 text-sm text-zinc-300">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-zinc-500">当前项目</span>
+                  <span>{activeProjectName}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-zinc-500">输出模式</span>
+                  <span>{batchMode ? "批量修订" : "单张生成"}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-zinc-500">画布尺寸</span>
+                  <span>{size.label}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-zinc-500">参考图</span>
+                  <span>{referenceImagePreview ? "已挂载" : "未挂载"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="editor-surface">
+              <div className="editor-block-label">批处理提示</div>
+              <p className="editor-help">批量模式会对每个导入素材套用同一套提示词。如果你要做风格统一，而不是内容重绘，这个区最有用。</p>
+            </div>
+
+            <div className="editor-surface">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="editor-block-label mb-0">最近任务</div>
+                <Link href="/tasks" className="text-xs text-yellow-500 hover:text-yellow-400">打开队列</Link>
+              </div>
+              {tasks.length > 0 ? (
+                <div className="space-y-2">
+                  {tasks.slice(0, 4).map((task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center gap-3 rounded-lg bg-zinc-800/50 px-3 py-2"
+                    >
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          task.status === "queued" && "bg-zinc-500",
+                          task.status === "running" && "bg-blue-400 animate-pulse",
+                          task.status === "success" && "bg-green-400",
+                          task.status === "failed" && "bg-red-400"
+                        )}
+                      />
+                      <span className="flex-1 truncate text-xs text-zinc-300">
+                        {task.prompt}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-zinc-600">
+                        {new Date(task.createdAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500">当前会话还没有任务。</p>
+              )}
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

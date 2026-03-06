@@ -163,7 +163,7 @@ export default function AssetsPage() {
   const readyCount = assets.filter((asset) => Boolean(asset.processedUrl || asset.originalUrl)).length;
 
   return (
-    <div className="page-shell page-shell-wide">
+    <div className="page-shell page-shell-wide editor-page">
       {/* Batch Import Modal */}
       {showImport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -340,42 +340,15 @@ export default function AssetsPage() {
         </div>
       )}
 
-      <div className="content-grid">
-        <div className="hero-banner">
-          <div>
-            <p className="hero-kicker">Asset Library</p>
-            <h1 className="hero-title font-display">把素材库从缩略图墙改成可检索、可筛看的资产架。</h1>
-            <p className="hero-copy">
-              左侧专注于浏览和筛选，右侧专注于单个素材的上下文。这样你能更快判断一个素材来自什么提示词、是否值得继续复用，以及它在库里的状态。
-            </p>
-          </div>
-          <div className="mini-stat-grid">
-            <div className="mini-stat">
-              <div className="mini-stat-label">库中总数</div>
-              <div className="mini-stat-value font-display">{assets.length}</div>
-              <div className="mini-stat-note">已导入或生成的全部素材</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">当前结果</div>
-              <div className="mini-stat-value font-display">{filtered.length}</div>
-              <div className="mini-stat-note">符合搜索条件的资产</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">已打标签</div>
-              <div className="mini-stat-value font-display">{taggedCount}</div>
-              <div className="mini-stat-note">可继续做二次归档的素材</div>
-            </div>
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">Content Browser</div>
+          <div className="editor-toolbar-title">
+            <ImageIcon className="h-4 w-4 text-yellow-400" />
+            资产浏览器
           </div>
         </div>
-
-        <div className="split-layout">
-          <div className="section-panel">
-            <div className="section-panel-inner">
-        <div className="mb-6 flex flex-wrap items-center gap-4">
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <ImageIcon className="h-5 w-5 text-yellow-400" />
-            资产库
-          </h1>
+        <div className="editor-toolbar-group">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
             <input
@@ -392,6 +365,40 @@ export default function AssetsPage() {
             <Upload className="h-4 w-4" />
             批量导入
           </button>
+        </div>
+      </div>
+
+      <div className="editor-stat-strip">
+        <div className="editor-stat">
+          <div className="editor-stat-title">库中总数</div>
+          <div className="editor-stat-value font-display">{assets.length}</div>
+          <div className="editor-stat-note">已导入或生成的全部素材</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">当前结果</div>
+          <div className="editor-stat-value font-display">{filtered.length}</div>
+          <div className="editor-stat-note">符合搜索条件的资产</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">已打标签</div>
+          <div className="editor-stat-value font-display">{taggedCount}</div>
+          <div className="editor-stat-note">可继续做二次归档的素材</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">可预览</div>
+          <div className="editor-stat-value font-display">{readyCount}</div>
+          <div className="editor-stat-note">存在原图或处理后图片的资产</div>
+        </div>
+      </div>
+
+      <div className="split-layout">
+          <div className="section-panel">
+            <div className="section-panel-inner">
+        <div className="mb-6 flex flex-wrap items-center gap-4">
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <ImageIcon className="h-5 w-5 text-yellow-400" />
+            资产库
+          </h1>
           <span className="text-sm text-zinc-500">{readyCount} 项可预览</span>
         </div>
 
@@ -517,7 +524,6 @@ export default function AssetsPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { EditorChrome } from "@/components/editor-chrome";
 import { Sidebar } from "@/components/sidebar";
 
 const sans = Manrope({
@@ -28,9 +29,12 @@ export default function RootLayout({
       <body className={`${sans.variable} ${display.variable} antialiased`}>
         <div className="app-shell">
           <div className="app-frame">
-          <Sidebar />
+            <Sidebar />
             <main className="app-main">
-              <div className="app-main-inner">{children}</div>
+              <EditorChrome />
+              <div className="app-main-scroll">
+                <div className="app-main-inner">{children}</div>
+              </div>
             </main>
           </div>
         </div>
