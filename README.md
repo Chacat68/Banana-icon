@@ -1,6 +1,6 @@
 # Banana Icon
 
-基于 Next.js + Cloudflare + Nano Banana API 的游戏素材生成与管理工具。
+基于 Next.js + 本地 SQLite + Nano Banana API 的游戏素材生成与管理工具。
 
 当前版本提供完整的素材工作流：
 - 项目管理
@@ -33,9 +33,8 @@
 - `TypeScript`
 - `Tailwind CSS 4`
 - `Drizzle ORM`
-- `Cloudflare D1` (数据库)
-- `Cloudflare R2` (文件存储)
-- `OpenNext Cloudflare` (构建/部署)
+- `better-sqlite3` (本地数据库)
+- `public/uploads` (本地文件存储)
 - `Zustand` (前端任务状态)
 
 ## 项目结构
@@ -57,10 +56,10 @@ src/
 			settings/              # 设置读取/更新
 			upload/                # 图片上传
 	lib/
-		db.ts                    # D1 + 本地 SQLite 回退
+		db.ts                    # 本地 SQLite
 		schema.ts                # Drizzle 数据表定义
 		nano-banana.ts           # 上游 API 客户端
-		r2.ts                    # R2 + 本地文件回退
+		r2.ts                    # 本地文件存储
 ```
 
 ## 快速开始
@@ -85,6 +84,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - `NANO_BANANA_API_KEY` 可作为默认密钥。
 - 实际运行时，若浏览器设置页保存了 Key，会优先使用浏览器中的 Key。
 - `NANO_BANANA_API_URL` 也可在设置页写入数据库（优先于环境变量）。
+- 本地单用户开发时，也可以只在设置页填写 API URL 与 API Key，而不依赖环境变量。
 
 ### 3. 本地开发
 
@@ -102,33 +102,29 @@ npm run local
 
 ## 数据库与迁移
 
-### Cloudflare D1
-
-在 `wrangler.toml` 中绑定了 D1：`DB`。
-
-执行迁移：
+执行本地迁移：
 
 ```bash
 npm run db:migrate
 ```
 
-本地 D1 迁移：
+这会把 `migrations/` 下的 SQL 依次应用到 `local.db`。
+
+### 本地数据库
+
+应用运行时会自动使用 `better-sqlite3` 创建 `local.db`。
+
+也可以在需要重建结构时手动执行：
 
 ```bash
 npm run db:migrate:local
 ```
 
-### 本地回退模式
-
-在非 Cloudflare 上下文下，`src/lib/db.ts` 会自动使用 `better-sqlite3` 创建 `local.db`。
-
 ## 对象存储
 
-- 云端：使用 R2 绑定 `ASSETS_BUCKET`。
-- 本地：自动写入 `public/uploads`。
+- 本地开发时，上传文件会自动写入 `public/uploads`。
 
 上传后的 URL 规则：
-- R2 模式返回 `/assets/<key>`
 - 本地模式返回 `/uploads/<file>`
 
 ## API 一览
@@ -158,43 +154,14 @@ npm run db:migrate:local
 - `POST /api/settings/test`: 测试上游 API 连通性。
 - `POST /api/upload`: 上传单个参考图。
 
-## Cloudflare 部署
-
-### 1. 准备资源
-
-1. 创建 D1：`wrangler d1 create banana-icon-db`
-2. 创建 R2：`wrangler r2 bucket create banana-icon-assets`
-3. 将返回值写入 `wrangler.toml` 中对应字段。
-
-### 2. 配置 Secret
-
-```bash
-wrangler secret put NANO_BANANA_API_KEY
-```
-
-### 3. 构建与发布
-
-```bash
-npm run deploy
-```
-
-仅预览本地 Cloudflare 产物：
-
-```bash
-npm run preview
-```
-
 ## 常用脚本
 
 - `npm run dev`: Next.js 开发模式
 - `npm run local`: 本地一键启动脚本
 - `npm run build`: Next.js 构建
-- `npm run cf:build`: OpenNext Cloudflare 构建
-- `npm run preview`: Cloudflare 本地预览
-- `npm run deploy`: Cloudflare 发布
 - `npm run db:generate`: 生成 Drizzle 迁移
-- `npm run db:migrate`: 执行远端 D1 迁移
-- `npm run db:migrate:local`: 执行本地 D1 迁移
+- `npm run db:migrate`: 执行本地 SQLite 迁移
+- `npm run db:migrate:local`: 执行本地 SQLite 迁移
 
 新增迁移说明：
 - `0004_add_upstream_task_id.sql` 为生成任务补充上游任务 ID，用于异步轮询状态同步。
