@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { generationTasks, assets } from "@/lib/schema";
-import { submitGeneration, buildPrompt } from "@/lib/nano-banana";
+import { submitGeneration, buildPrompt, mapUpstreamStatus } from "@/lib/nano-banana";
 import { eq, desc, inArray } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -82,6 +82,19 @@ export async function POST(req: NextRequest) {
         reference_image_url: referenceImageUrl,
       }, clientKey)
         .then(async (result) => {
+          const nextStatus = mapUpstreamStatus(result.status);
+          const upstreamTaskId = result.id || taskId;
+
+          await db
+            .update(generationTasks)
+            .set({
+              upstreamTaskId,
+              status: nextStatus,
+              errorMessage: result.error || null,
+              updatedAt: new Date().toISOString(),
+            })
+            .where(eq(generationTasks.id, taskId));
+
           if (result.status === "completed" && result.images) {
             // Idempotent: only insert assets if task hasn't already been marked success
             const [current] = await db.select().from(generationTasks)
@@ -89,7 +102,12 @@ export async function POST(req: NextRequest) {
             if (current && current.status !== "success") {
               await db
                 .update(generationTasks)
-                .set({ status: "success", updatedAt: new Date().toISOString() })
+                .set({
+                  upstreamTaskId,
+                  status: "success",
+                  errorMessage: null,
+                  updatedAt: new Date().toISOString(),
+                })
                 .where(eq(generationTasks.id, taskId));
               for (const img of result.images) {
                 await db.insert(assets).values({
@@ -106,11 +124,6 @@ export async function POST(req: NextRequest) {
                 });
               }
             }
-          } else {
-            await db
-              .update(generationTasks)
-              .set({ status: "running", updatedAt: new Date().toISOString() })
-              .where(eq(generationTasks.id, taskId));
           }
         })
         .catch(async (err: unknown) => {

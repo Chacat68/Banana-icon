@@ -196,6 +196,9 @@ npm run preview
 - `npm run db:migrate`: 执行远端 D1 迁移
 - `npm run db:migrate:local`: 执行本地 D1 迁移
 
+新增迁移说明：
+- `0004_add_upstream_task_id.sql` 为生成任务补充上游任务 ID，用于异步轮询状态同步。
+
 ## 设计与安全说明
 
 - API Key 不写入数据库，仅存在浏览器本地存储。

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS style_profiles (
 );
 CREATE TABLE IF NOT EXISTS generation_tasks (
   id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'queued',
+  upstream_task_id TEXT,
   prompt TEXT NOT NULL, negative_prompt TEXT, reference_image_url TEXT,
   width INTEGER NOT NULL DEFAULT 512, height INTEGER NOT NULL DEFAULT 512,
   seed INTEGER, batch_size INTEGER NOT NULL DEFAULT 1, parameters TEXT,
@@ -69,6 +70,11 @@ export async function getDbFromContext() {
       sqlite.pragma("journal_mode = WAL");
       sqlite.pragma("foreign_keys = ON");
       sqlite.exec(INIT_SQL);
+      try {
+        sqlite.exec("ALTER TABLE generation_tasks ADD COLUMN upstream_task_id TEXT");
+      } catch {
+        // Ignore if the column already exists in an existing local database.
+      }
       localDb = drizzle(sqlite, { schema });
     }
     return localDb;
