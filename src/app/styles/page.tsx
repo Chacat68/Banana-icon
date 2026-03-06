@@ -96,7 +96,10 @@ export default function StylesPage() {
     try {
       const res = await fetch("/api/styles/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...getApiKeyHeaders() },
+        headers: {
+          "Content-Type": "application/json",
+          ...getApiKeyHeaders(),
+        },
         body: JSON.stringify({ imageUrl: refImageUrl }),
       });
       const data = (await res.json()) as {
