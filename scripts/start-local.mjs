@@ -11,7 +11,7 @@
  * 用法：npm run local 或 node scripts/start-local.mjs
  */
 
-import { existsSync, copyFileSync, mkdirSync } from "fs";
+import { existsSync, copyFileSync, mkdirSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -29,6 +29,29 @@ function logOk(msg) {
 
 function logSkip(msg) {
   console.log(`\x1b[90m   - ${msg}\x1b[0m`);
+}
+
+function readEnvValue(key) {
+  if (!existsSync(envFile)) return "";
+  const content = requireEnvFile();
+  const pattern = new RegExp(`^${key}=(.*)$`, "m");
+  const match = content.match(pattern);
+  return match?.[1]?.trim() || "";
+}
+
+let envFileCache = null;
+
+function requireEnvFile() {
+  if (envFileCache !== null) return envFileCache;
+  envFileCache = existsSync(envFile)
+    ? readFileSync(envFile, "utf8")
+    : "";
+  return envFileCache;
+}
+
+function isPlaceholderValue(value, placeholders) {
+  if (!value) return true;
+  return placeholders.includes(value.trim());
 }
 
 // 1. 检查 .env
@@ -52,7 +75,23 @@ if (!existsSync(uploadsDir)) {
   logSkip("public/uploads 目录已存在");
 }
 
-// 3. 启动 Next.js dev server
+// 3. 检查 Nano Banana 配置
+const apiKey = readEnvValue("NANO_BANANA_API_KEY");
+const apiUrl = readEnvValue("NANO_BANANA_API_URL");
+
+if (isPlaceholderValue(apiKey, ["your_api_key_here"])) {
+  log("检测到 NANO_BANANA_API_KEY 尚未配置。你可以：");
+  console.log("   1. 编辑 .env 填入真实 key");
+  console.log("   2. 或启动后在 /settings 页面填写 API Key");
+}
+
+if (isPlaceholderValue(apiUrl, ["https://api.nano-banana.example.com"])) {
+  log("检测到 NANO_BANANA_API_URL 仍是默认占位值。你可以：");
+  console.log("   1. 编辑 .env 填入真实 API URL");
+  console.log("   2. 或启动后在 /settings 页面填写 API URL");
+}
+
+// 4. 启动 Next.js dev server
 log("启动开发服务器...\n");
 
 const port = process.env.PORT || "3000";

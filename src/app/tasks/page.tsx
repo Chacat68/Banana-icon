@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   Sparkles,
   Loader2,
@@ -53,10 +53,22 @@ const statusClassNames: Record<string, string> = {
 export default function TasksPage() {
   const [serverTasks, setServerTasks] = useState<TaskWithAssets[]>([]);
   const [loading, setLoading] = useState(true);
-  const { tasks: localTasks, updateTask } = useTaskStore();
+  const localTasks = useTaskStore((state) => state.tasks);
+  const updateTask = useTaskStore((state) => state.updateTask);
+  const pendingTasks = useMemo(
+    () =>
+      localTasks
+        .filter((task) => task.status === "queued" || task.status === "running")
+        .map((task) => ({ id: task.id, status: task.status })),
+    [localTasks]
+  );
+  const pendingTasksRef = useRef(pendingTasks);
 
-  const loadTasks = useCallback(async () => {
-    setLoading(true);
+  const loadTasks = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
     try {
       const res = await fetch("/api/generate");
       const data = (await res.json()) as TaskWithAssets[];
@@ -64,7 +76,9 @@ export default function TasksPage() {
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -72,18 +86,26 @@ export default function TasksPage() {
     loadTasks();
   }, [loadTasks]);
 
-  // Poll running/queued tasks
   useEffect(() => {
-    const pending = [
-      ...localTasks.filter(
-        (t) => t.status === "queued" || t.status === "running"
-      ),
-    ];
-    if (pending.length === 0) return;
+    pendingTasksRef.current = pendingTasks;
+  }, [pendingTasks]);
 
-    const interval = setInterval(async () => {
-      for (const task of pending) {
-        try {
+  // Poll running/queued tasks with one stable interval and concurrent requests.
+  useEffect(() => {
+    if (pendingTasks.length === 0) {
+      return;
+    }
+
+    let stopped = false;
+
+    const pollPendingTasks = async () => {
+      const currentPendingTasks = pendingTasksRef.current;
+      if (currentPendingTasks.length === 0) {
+        return;
+      }
+
+      const results = await Promise.allSettled(
+        currentPendingTasks.map(async (task) => {
           const res = await fetch(
             `/api/generate/${encodeURIComponent(task.id)}/status`,
             { headers: getApiKeyHeaders() }
@@ -93,24 +115,54 @@ export default function TasksPage() {
             errorMessage?: string;
             assets?: { originalUrl: string }[];
           };
-          if (data.status === "success" || data.status === "failed") {
-            updateTask(task.id, {
-              status: data.status as TaskStatus,
-              error: data.errorMessage || undefined,
-              imageUrls: data.assets?.map((a) => a.originalUrl) || [],
-            });
-            loadTasks();
-          } else if (data.status !== task.status) {
-            updateTask(task.id, { status: data.status as TaskStatus });
-          }
-        } catch {
-          // ignore polling errors
-        }
+
+          return { task, data };
+        })
+      );
+
+      if (stopped) {
+        return;
       }
+
+      let shouldRefreshServerTasks = false;
+
+      results.forEach((result) => {
+        if (result.status !== "fulfilled") {
+          return;
+        }
+
+        const { task, data } = result.value;
+
+        if (data.status === "success" || data.status === "failed") {
+          shouldRefreshServerTasks = true;
+          updateTask(task.id, {
+            status: data.status as TaskStatus,
+            error: data.errorMessage || undefined,
+            imageUrls: data.assets?.map((asset) => asset.originalUrl) || [],
+          });
+          return;
+        }
+
+        if (data.status !== task.status) {
+          updateTask(task.id, { status: data.status as TaskStatus });
+        }
+      });
+
+      if (shouldRefreshServerTasks) {
+        await loadTasks(true);
+      }
+    };
+
+    void pollPendingTasks();
+    const interval = setInterval(() => {
+      void pollPendingTasks();
     }, 3000);
 
-    return () => clearInterval(interval);
-  }, [localTasks, updateTask, loadTasks]);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [pendingTasks.length, updateTask, loadTasks]);
 
   // Merge local tasks with server tasks (local tasks take priority for recent ones)
   const localIds = new Set(localTasks.map((t) => t.id));
@@ -144,7 +196,9 @@ export default function TasksPage() {
             返回生成
           </Link>
           <button
-            onClick={loadTasks}
+            onClick={() => {
+              void loadTasks();
+            }}
             className="flex items-center gap-1.5 rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />

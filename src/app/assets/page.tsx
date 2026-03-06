@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useDeferredValue, useMemo, useRef } from "react";
 import {
   ImageIcon,
   Download,
@@ -34,12 +34,41 @@ interface Project {
 }
 
 type ImportStatus = "idle" | "uploading" | "done";
+const PAGE_SIZE = 48;
+
+interface AssetsResponse {
+  items: Asset[];
+  pagination: {
+    offset: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+  stats: {
+    total: number;
+    tagged: number;
+    ready: number;
+  };
+}
+
+function getAssetThumbnailSrc(asset: Asset) {
+  return asset.thumbnailUrl || asset.processedUrl || asset.originalUrl;
+}
+
+function getAssetFullSrc(asset: Asset) {
+  return asset.processedUrl || asset.originalUrl;
+}
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [taggedCount, setTaggedCount] = useState(0);
+  const [readyCount, setReadyCount] = useState(0);
   const [search, setSearch] = useState("");
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
 
   // Batch import state
   const [showImport, setShowImport] = useState(false);
@@ -55,18 +84,38 @@ export default function AssetsPage() {
   } | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const deferredSearch = useDeferredValue(search);
+  const normalizedSearch = deferredSearch.trim();
+
+  const loadAssetsPage = useCallback(async (offset = 0) => {
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      offset: String(offset),
+    });
+
+    if (normalizedSearch) {
+      params.set("q", normalizedSearch);
+    }
+
+    const res = await fetch(`/api/assets?${params.toString()}`);
+    return (await res.json()) as AssetsResponse;
+  }, [normalizedSearch]);
 
   const loadAssets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/assets");
-      setAssets((await res.json()) as Asset[]);
+      const data = await loadAssetsPage(0);
+      setAssets(data.items);
+      setHasMore(data.pagination.hasMore);
+      setTotalCount(data.stats.total);
+      setTaggedCount(data.stats.tagged);
+      setReadyCount(data.stats.ready);
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadAssetsPage]);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -85,15 +134,44 @@ export default function AssetsPage() {
     loadAssets();
   }, [loadAssets]);
 
+  const loadMoreAssets = useCallback(async () => {
+    if (loadingMore || !hasMore) {
+      return;
+    }
+
+    setLoadingMore(true);
+    try {
+      const data = await loadAssetsPage(assets.length);
+      setAssets((current) => [...current, ...data.items]);
+      setHasMore(data.pagination.hasMore);
+      setTotalCount(data.stats.total);
+      setTaggedCount(data.stats.tagged);
+      setReadyCount(data.stats.ready);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [assets.length, hasMore, loadAssetsPage, loadingMore]);
+
   const deleteAsset = useCallback(
     async (id: string) => {
+      const deletedAsset = assets.find((asset) => asset.id === id);
       await fetch(`/api/assets?id=${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       setAssets((a) => a.filter((x) => x.id !== id));
-      if (selectedAsset?.id === id) setSelectedAsset(null);
+      if (selectedAssetId === id) setSelectedAssetId(null);
+
+      if (deletedAsset) {
+        setTotalCount((count) => Math.max(0, count - 1));
+        setReadyCount((count) => Math.max(0, count - 1));
+        if (deletedAsset.tags?.trim()) {
+          setTaggedCount((count) => Math.max(0, count - 1));
+        }
+      }
     },
-    [selectedAsset]
+    [assets, selectedAssetId]
   );
 
   const openImportDialog = useCallback(() => {
@@ -153,14 +231,10 @@ export default function AssetsPage() {
     }
   }, [importFiles, importProjectId, importTags, importPrompt, loadAssets]);
 
-  const filtered = assets.filter(
-    (a) =>
-      a.prompt.toLowerCase().includes(search.toLowerCase()) ||
-      (a.tags && a.tags.toLowerCase().includes(search.toLowerCase()))
+  const selectedAsset = useMemo(
+    () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
+    [assets, selectedAssetId]
   );
-
-  const taggedCount = assets.filter((asset) => Boolean(asset.tags?.trim())).length;
-  const readyCount = assets.filter((asset) => Boolean(asset.processedUrl || asset.originalUrl)).length;
 
   return (
     <div className="page-shell page-shell-wide editor-page">
@@ -371,13 +445,13 @@ export default function AssetsPage() {
       <div className="editor-stat-strip">
         <div className="editor-stat">
           <div className="editor-stat-title">库中总数</div>
-          <div className="editor-stat-value font-display">{assets.length}</div>
+          <div className="editor-stat-value font-display">{totalCount}</div>
           <div className="editor-stat-note">已导入或生成的全部素材</div>
         </div>
         <div className="editor-stat">
           <div className="editor-stat-title">当前结果</div>
-          <div className="editor-stat-value font-display">{filtered.length}</div>
-          <div className="editor-stat-note">符合搜索条件的资产</div>
+          <div className="editor-stat-value font-display">{assets.length}</div>
+          <div className="editor-stat-note">当前已加载到浏览器的资产</div>
         </div>
         <div className="editor-stat">
           <div className="editor-stat-title">已打标签</div>
@@ -399,48 +473,65 @@ export default function AssetsPage() {
             <ImageIcon className="h-5 w-5 text-yellow-400" />
             资产库
           </h1>
-          <span className="text-sm text-zinc-500">{readyCount} 项可预览</span>
+          <span className="text-sm text-zinc-500">已加载 {assets.length} / {totalCount} 项</span>
         </div>
 
         {loading ? (
           <p className="py-20 text-center text-zinc-500">加载中…</p>
-        ) : filtered.length === 0 ? (
+        ) : assets.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-zinc-500">
             <ImageIcon className="mb-3 h-10 w-10 text-zinc-700" />
-            <p>暂无素材</p>
+            <p>{normalizedSearch ? "没有匹配的素材" : "暂无素材"}</p>
           </div>
         ) : (
-          <div className="asset-grid">
-            {filtered.map((asset) => (
-              <button
-                key={asset.id}
-                onClick={() => setSelectedAsset(asset)}
-                className={cn(
-                  "asset-tile group relative text-left",
-                  selectedAsset?.id === asset.id
-                    ? "asset-tile-active"
-                    : ""
-                )}
-              >
-                <div className="aspect-square bg-zinc-800">
-                  <img
-                    src={asset.processedUrl || asset.originalUrl}
-                    alt={asset.prompt}
-                    className="h-full w-full object-contain"
-                  />
-                </div>
-                <div className="p-3">
-                  <p className="line-clamp-2 min-h-10 text-xs text-zinc-400">{asset.prompt}</p>
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-600">
-                    <span>
-                    {asset.width}×{asset.height}
-                    </span>
-                    <span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+          <>
+            <div className="asset-grid">
+              {assets.map((asset) => (
+                <button
+                  key={asset.id}
+                  onClick={() => setSelectedAssetId(asset.id)}
+                  className={cn(
+                    "asset-tile group relative text-left",
+                    selectedAssetId === asset.id
+                      ? "asset-tile-active"
+                      : ""
+                  )}
+                >
+                  <div className="aspect-square bg-zinc-800">
+                    <img
+                      src={asset.processedUrl || asset.originalUrl}
+                      alt={asset.prompt}
+                      className="h-full w-full object-contain"
+                    />
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                  <div className="p-3">
+                    <p className="line-clamp-2 min-h-10 text-xs text-zinc-400">{asset.prompt}</p>
+                    <div className="mt-2 flex items-center justify-between text-[10px] text-zinc-600">
+                      <span>
+                      {asset.width}×{asset.height}
+                      </span>
+                      <span>{new Date(asset.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => {
+                    void loadMoreAssets();
+                  }}
+                  disabled={loadingMore}
+                  className="flex items-center gap-2 rounded-lg border border-zinc-700 px-4 py-2 text-sm text-zinc-300 transition-colors hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {loadingMore ? "加载中…" : `加载更多 (${Math.max(totalCount - assets.length, 0)} 剩余)`}
+                </button>
+              </div>
+            )}
+          </>
         )}
             </div>
           </div>
@@ -451,9 +542,11 @@ export default function AssetsPage() {
         <>
           <div className="mb-4 aspect-square overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800">
             <img
-              src={selectedAsset.processedUrl || selectedAsset.originalUrl}
+              src={getAssetFullSrc(selectedAsset)}
               alt={selectedAsset.prompt}
               className="h-full w-full object-contain"
+              loading="eager"
+              decoding="async"
             />
           </div>
 
@@ -524,6 +617,76 @@ export default function AssetsPage() {
             </div>
           </div>
         </div>
+    </div>
+  );
+}
+
+function AssetCardImage({ asset }: { asset: Asset }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const previewSrc = getAssetThumbnailSrc(asset);
+  const fullSrc = getAssetFullSrc(asset);
+  const [currentSrc, setCurrentSrc] = useState(previewSrc);
+
+  useEffect(() => {
+    setCurrentSrc(previewSrc);
+    setIsLoaded(false);
+  }, [previewSrc]);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node || shouldLoad) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "280px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return (
+    <div ref={containerRef} className="relative aspect-square overflow-hidden bg-zinc-800">
+      <div
+        className={cn(
+          "absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_top,rgba(250,204,21,0.14),transparent_55%),linear-gradient(180deg,rgba(39,39,42,0.92),rgba(24,24,27,1))] transition-opacity",
+          isLoaded ? "opacity-0" : "opacity-100"
+        )}
+      >
+        <ImageIcon className="h-7 w-7 text-zinc-600" />
+      </div>
+
+      {shouldLoad ? (
+        <img
+          src={currentSrc}
+          alt={asset.prompt}
+          className={cn(
+            "h-full w-full object-contain transition-opacity duration-200",
+            isLoaded ? "opacity-100" : "opacity-0"
+          )}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          onLoad={() => setIsLoaded(true)}
+          onError={() => {
+            if (currentSrc !== fullSrc) {
+              setCurrentSrc(fullSrc);
+              return;
+            }
+
+            setIsLoaded(true);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

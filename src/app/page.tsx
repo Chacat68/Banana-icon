@@ -58,7 +58,16 @@ export default function GeneratePage() {
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
 
-  const { tasks, addTask, updateTask } = useTaskStore();
+  const pendingCount = useTaskStore(
+    (state) =>
+      state.tasks.reduce(
+        (count, task) =>
+          task.status === "queued" || task.status === "running"
+            ? count + 1
+            : count,
+        0
+      )
+  );
 
   // Load projects
   useEffect(() => {
@@ -164,7 +173,7 @@ export default function GeneratePage() {
       imageUrls: [],
       createdAt: new Date().toISOString(),
     };
-    addTask(localTask);
+    useTaskStore.getState().addTask(localTask);
 
     try {
       const res = await fetch("/api/generate", {
@@ -188,18 +197,17 @@ export default function GeneratePage() {
       });
       const data = await res.json() as { id: string; status: string; error?: string };
       if (!res.ok) {
-        updateTask(taskId, { status: "failed", error: data.error || `Server error (${res.status})` });
+        useTaskStore.getState().updateTask(taskId, { status: "failed", error: data.error || `Server error (${res.status})` });
         return;
       }
-      updateTask(taskId, { id: data.id, status: data.status as TaskStatus });
+      useTaskStore.getState().updateTask(taskId, { id: data.id, status: data.status as TaskStatus });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Request failed";
-      updateTask(taskId, { status: "failed", error: message });
+      useTaskStore.getState().updateTask(taskId, { status: "failed", error: message });
     }
   }, [
     style, background, extras,
     negativePrompt, size, batchSize, selectedProject, referenceImageUrl,
-    addTask, updateTask,
   ]);
 
   const handleSubmit = useCallback(async () => {
@@ -223,10 +231,6 @@ export default function GeneratePage() {
   }, [
     subject, batchMode, batchFiles, selectedProject, submitSingle, uploadFile, clearBatchFiles,
   ]);
-
-  const pendingCount = tasks.filter(
-    (t) => t.status === "queued" || t.status === "running"
-  ).length;
 
   const quickStats = [
     {
@@ -687,38 +691,65 @@ export default function GeneratePage() {
                 <div className="editor-block-label mb-0">最近任务</div>
                 <Link href="/tasks" className="text-xs text-yellow-500 hover:text-yellow-400">打开队列</Link>
               </div>
-              {tasks.length > 0 ? (
-                <div className="space-y-2">
-                  {tasks.slice(0, 4).map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 rounded-lg bg-zinc-800/50 px-3 py-2"
-                    >
-                      <span
-                        className={cn(
-                          "h-2 w-2 shrink-0 rounded-full",
-                          task.status === "queued" && "bg-zinc-500",
-                          task.status === "running" && "bg-blue-400 animate-pulse",
-                          task.status === "success" && "bg-green-400",
-                          task.status === "failed" && "bg-red-400"
-                        )}
-                      />
-                      <span className="flex-1 truncate text-xs text-zinc-300">
-                        {task.prompt}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-zinc-600">
-                        {new Date(task.createdAt).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-zinc-500">当前会话还没有任务。</p>
-              )}
+              <RecentTasksPanel />
             </div>
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function areSameTasks(a: TaskItem[], b: TaskItem[]) {
+  return a.length === b.length && a.every((task, index) => task === b[index]);
+}
+
+function RecentTasksPanel() {
+  const [recentTasks, setRecentTasks] = useState<TaskItem[]>([]);
+
+  useEffect(() => {
+    const syncRecentTasks = (tasks: TaskItem[]) => {
+      const nextRecentTasks = tasks.slice(0, 4);
+      setRecentTasks((current) =>
+        areSameTasks(current, nextRecentTasks) ? current : nextRecentTasks
+      );
+    };
+
+    syncRecentTasks(useTaskStore.getState().tasks);
+
+    return useTaskStore.subscribe((state) => {
+      syncRecentTasks(state.tasks);
+    });
+  }, []);
+
+  if (recentTasks.length === 0) {
+    return <p className="text-xs text-zinc-500">当前会话还没有任务。</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {recentTasks.map((task) => (
+        <div
+          key={task.id}
+          className="flex items-center gap-3 rounded-lg bg-zinc-800/50 px-3 py-2"
+        >
+          <span
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              task.status === "queued" && "bg-zinc-500",
+              task.status === "running" && "bg-blue-400 animate-pulse",
+              task.status === "success" && "bg-green-400",
+              task.status === "failed" && "bg-red-400"
+            )}
+          />
+          <span className="flex-1 truncate text-xs text-zinc-300">
+            {task.prompt}
+          </span>
+          <span className="shrink-0 text-[10px] text-zinc-600">
+            {new Date(task.createdAt).toLocaleTimeString()}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
