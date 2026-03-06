@@ -11,6 +11,17 @@
 			],
 			"isBackground": true,
 			"group": "build"
+		},
+		{
+			"label": "Restart local Banana Icon server",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"local"
+			],
+			"isBackground": true,
+			"group": "build"
 		}
 	]
 }

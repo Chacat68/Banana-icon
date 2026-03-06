@@ -87,12 +87,28 @@ export default function SettingsPage() {
   }, [apiKey]);
 
   return (
-    <div className="page-shell">
-      <div className="mx-auto max-w-xl">
-        <h1 className="mb-6 text-xl font-semibold flex items-center gap-2">
-          <Settings className="h-5 w-5 text-yellow-400" />
-          设置
-        </h1>
+    <div className="page-shell editor-page">
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">System Settings</div>
+          <div className="editor-toolbar-title">
+            <Settings className="h-4 w-4 text-yellow-400" />
+            连接与运行配置
+          </div>
+        </div>
+        <div className="editor-toolbar-group">
+          <span className="editor-chip">Storage: Local + DB</span>
+          <span className="editor-chip">API Key: Browser Only</span>
+        </div>
+      </div>
+
+      <div className="split-layout" style={{ gridTemplateColumns: "minmax(0, 1.2fr) minmax(280px, 0.8fr)" }}>
+        <div className="section-panel">
+          <div className="section-panel-inner">
+            <h1 className="mb-6 text-xl font-semibold flex items-center gap-2">
+              <Settings className="h-5 w-5 text-yellow-400" />
+              设置
+            </h1>
 
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -220,6 +236,27 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+          </div>
+        </div>
+
+        <div className="section-panel detail-panel">
+          <div className="section-panel-inner">
+            <div className="editor-panel-subtitle">Inspector</div>
+            <div className="editor-panel-title mb-4">配置说明</div>
+            <div className="editor-surface">
+              <div className="editor-block-label">密钥策略</div>
+              <p className="editor-help">API Key 只保存在当前浏览器的 localStorage，不会写入数据库或上传到服务端。</p>
+            </div>
+            <div className="editor-surface mt-3">
+              <div className="editor-block-label">URL 策略</div>
+              <p className="editor-help">API URL 存在服务端数据库，便于多设备共享。浏览器本地的 API Key 优先级仍然更高。</p>
+            </div>
+            <div className="editor-surface mt-3">
+              <div className="editor-block-label">联调建议</div>
+              <p className="editor-help">先保存 URL 与 Key，再测试连接。调试接口问题时优先查看返回延迟和错误消息。</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

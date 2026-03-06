@@ -53,36 +53,52 @@ export default function ProjectsPage() {
   const totalTasks = projects.reduce((sum, project) => sum + project._count.tasks, 0);
 
   return (
-    <div className="page-shell page-shell-wide">
-      <div className="content-grid">
-        <div className="hero-banner">
-          <div>
-            <p className="hero-kicker">Project Registry</p>
-            <h1 className="hero-title font-display">把项目从孤立名字，变成带上下文的生产单元。</h1>
-            <p className="hero-copy">
-              项目页现在更像项目注册表。你能快速看到每个项目累计了多少素材和任务，也更容易判断哪些项目值得继续维护，哪些只是临时实验。
-            </p>
-          </div>
-          <div className="mini-stat-grid">
-            <div className="mini-stat">
-              <div className="mini-stat-label">项目总数</div>
-              <div className="mini-stat-value font-display">{projects.length}</div>
-              <div className="mini-stat-note">已登记的创作空间</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">累计素材</div>
-              <div className="mini-stat-value font-display">{totalAssets}</div>
-              <div className="mini-stat-note">所有项目下沉淀的资产数量</div>
-            </div>
-            <div className="mini-stat">
-              <div className="mini-stat-label">累计任务</div>
-              <div className="mini-stat-value font-display">{totalTasks}</div>
-              <div className="mini-stat-note">所有项目发起过的生成任务</div>
-            </div>
+    <div className="page-shell page-shell-wide editor-page">
+      <div className="editor-toolbar">
+        <div>
+          <div className="editor-toolbar-meta">Project Registry</div>
+          <div className="editor-toolbar-title">
+            <FolderOpen className="h-4 w-4 text-yellow-400" />
+            项目注册表
           </div>
         </div>
+        <div className="editor-toolbar-group">
+          <span className="editor-chip">Assets: {totalAssets}</span>
+          <span className="editor-chip">Tasks: {totalTasks}</span>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-1 rounded-lg bg-yellow-500 px-3 py-2 text-sm font-medium text-black hover:bg-yellow-400"
+          >
+            <Plus className="h-4 w-4" />
+            {showForm ? "收起表单" : "新建项目"}
+          </button>
+        </div>
+      </div>
 
-        <div className="section-panel">
+      <div className="editor-stat-strip">
+        <div className="editor-stat">
+          <div className="editor-stat-title">项目总数</div>
+          <div className="editor-stat-value font-display">{projects.length}</div>
+          <div className="editor-stat-note">已登记的创作空间</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">累计素材</div>
+          <div className="editor-stat-value font-display">{totalAssets}</div>
+          <div className="editor-stat-note">所有项目下沉淀的资产数量</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">累计任务</div>
+          <div className="editor-stat-value font-display">{totalTasks}</div>
+          <div className="editor-stat-note">所有项目发起过的生成任务</div>
+        </div>
+        <div className="editor-stat">
+          <div className="editor-stat-title">平均密度</div>
+          <div className="editor-stat-value font-display">{projects.length ? Math.round(totalTasks / projects.length) : 0}</div>
+          <div className="editor-stat-note">每个项目平均任务数</div>
+        </div>
+      </div>
+
+      <div className="section-panel">
           <div className="section-panel-inner">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -193,7 +209,6 @@ export default function ProjectsPage() {
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }

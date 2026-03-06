@@ -22,17 +22,17 @@ export function Sidebar() {
       <div className="sidebar-brand">
         <div className="brand-badge">
           <span className="text-base">🍌</span>
-          Banana Control Deck
+          Editor Workspace
         </div>
         <div>
           <p className="brand-heading font-display">Banana Icon</p>
           <p className="brand-copy">
-            把项目、任务和风格模板放进同一张创作控制台。
+	          项目、任务和素材在同一套编辑器面板里协同管理。
           </p>
         </div>
       </div>
 
-      <p className="side-kicker">Studio Map</p>
+      <p className="side-kicker">Panels</p>
 
       <nav className="nav-stack flex-1">
         {navItems.map((item) => {
@@ -61,7 +61,7 @@ export function Sidebar() {
         <div className="sidebar-footer-label">Engine</div>
         <div className="sidebar-footer-value">Nano Banana Runtime</div>
         <p className="sidebar-footer-copy">
-          当前界面围绕项目流和产出追踪重排，减少来回切页的成本。
+	        深色分区和低干扰强调色，更接近游戏编辑器的控制台视图。
         </p>
       </div>
     </aside>
