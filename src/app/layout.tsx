@@ -1,6 +1,17 @@
 import type { Metadata } from "next";
+import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+
+const sans = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
   title: "Banana Icon - AI Game Asset Generator",
@@ -14,10 +25,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="zh-CN">
-      <body className="bg-zinc-950 text-zinc-100 antialiased">
-        <div className="flex h-screen">
+      <body className={`${sans.variable} ${display.variable} antialiased`}>
+        <div className="app-shell">
+          <div className="app-frame">
           <Sidebar />
-          <main className="flex-1 overflow-auto">{children}</main>
+            <main className="app-main">
+              <div className="app-main-inner">{children}</div>
+            </main>
+          </div>
         </div>
       </body>
     </html>

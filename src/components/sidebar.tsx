@@ -18,12 +18,23 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-56 flex-col border-r border-zinc-800 bg-zinc-900">
-      <div className="flex h-14 items-center gap-2 border-b border-zinc-800 px-4">
-        <span className="text-xl">🍌</span>
-        <span className="font-semibold tracking-tight">Banana Icon</span>
+    <aside className="app-sidebar flex flex-col">
+      <div className="sidebar-brand">
+        <div className="brand-badge">
+          <span className="text-base">🍌</span>
+          Banana Control Deck
+        </div>
+        <div>
+          <p className="brand-heading font-display">Banana Icon</p>
+          <p className="brand-copy">
+            把项目、任务和风格模板放进同一张创作控制台。
+          </p>
+        </div>
       </div>
-      <nav className="flex-1 space-y-1 p-2">
+
+      <p className="side-kicker">Studio Map</p>
+
+      <nav className="nav-stack flex-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const active =
@@ -35,10 +46,8 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                active
-                  ? "bg-yellow-500/10 text-yellow-400"
-                  : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-200"
+                "nav-pill text-sm",
+                active ? "nav-pill-active" : ""
               )}
             >
               <Icon className="h-4 w-4" />
@@ -47,8 +56,13 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t border-zinc-800 p-4 text-xs text-zinc-500">
-        Powered by Nano Banana
+
+      <div className="sidebar-footer">
+        <div className="sidebar-footer-label">Engine</div>
+        <div className="sidebar-footer-value">Nano Banana Runtime</div>
+        <p className="sidebar-footer-copy">
+          当前界面围绕项目流和产出追踪重排，减少来回切页的成本。
+        </p>
       </div>
     </aside>
   );

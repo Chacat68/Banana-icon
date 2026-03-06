@@ -225,14 +225,51 @@ export default function GeneratePage() {
     (t) => t.status === "queued" || t.status === "running"
   ).length;
 
+  const quickStats = [
+    {
+      label: "活跃任务",
+      value: String(pendingCount),
+      note: pendingCount > 0 ? "队列里仍有任务在处理" : "当前没有排队中的生成请求",
+    },
+    {
+      label: "项目数量",
+      value: String(projects.length),
+      note: projects.length > 0 ? "可以直接切换项目继续出图" : "先创建项目再开始生成",
+    },
+    {
+      label: "当前画布",
+      value: `${size.w}×${size.h}`,
+      note: batchMode ? "已切到批量修订模式" : "当前是单张生成工作流",
+    },
+  ];
+
   return (
-    <div className="h-full overflow-y-auto p-6">
-      <div className="mx-auto max-w-2xl">
+    <div className="page-shell">
+      <div className="hero-banner">
+        <div>
+          <p className="hero-kicker">Banana Icon Studio</p>
+          <h1 className="hero-title font-display">把提示词、风格参考和项目资产放进同一张工作台。</h1>
+          <p className="hero-copy">
+            这一版界面把重心放在创作流程本身。你不再只是填写表单，而是在一个可持续切换项目、批量修订和追踪任务的制作台上工作。
+          </p>
+        </div>
+        <div className="hero-metrics">
+          {quickStats.map((item) => (
+            <div key={item.label} className="metric-card">
+              <div className="metric-label">{item.label}</div>
+              <div className="metric-value font-display">{item.value}</div>
+              <div className="metric-note">{item.note}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-3xl workbench-card p-6 sm:p-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
             <Sparkles className="h-5 w-5 text-yellow-400" />
-            生成游戏素材
+            生成工作台
           </h1>
           <Link
             href="/tasks"
@@ -246,6 +283,21 @@ export default function GeneratePage() {
               </span>
             )}
           </Link>
+        </div>
+
+        <div className="mb-6 grid gap-3 rounded-2xl border border-white/60 bg-white/40 p-4 sm:grid-cols-3">
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">流程</div>
+            <div className="mt-2 text-sm text-zinc-400">先选项目，再设定模式和输出规格。</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">参考</div>
+            <div className="mt-2 text-sm text-zinc-400">拖入参考图可稳定风格，批量模式适合旧素材翻新。</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">结果</div>
+            <div className="mt-2 text-sm text-zinc-400">新任务会即时进入队列，并同步显示在最近任务面板里。</div>
+          </div>
         </div>
 
         {/* Project selector */}
