@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { uploadToR2 } from "@/lib/r2";
+import { saveUploadedAsset } from "@/lib/asset-storage";
 import { v4 as uuid } from "uuid";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 
-/** POST /api/upload — Upload an image to R2 */
+/** POST /api/upload — Upload an image to local storage */
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const ext = contentType.split("/")[1] || "png";
     const key = `ref/${uuid()}.${ext}`;
     const buffer = await file.arrayBuffer();
-    const url = await uploadToR2(key, buffer, contentType);
+    const url = await saveUploadedAsset(key, buffer, contentType);
 
     return NextResponse.json({ url, key }, { status: 201 });
   } catch (err: unknown) {

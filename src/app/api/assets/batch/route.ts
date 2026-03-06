@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
-import { uploadToR2 } from "@/lib/r2";
+import { saveUploadedAsset } from "@/lib/asset-storage";
 import { assets } from "@/lib/schema";
 import { v4 as uuid } from "uuid";
 
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         // Get image dimensions from the buffer
         const { width, height } = parseDimensions(new Uint8Array(buffer), f.type);
 
-        const url = await uploadToR2(key, buffer, f.type);
+        const url = await saveUploadedAsset(key, buffer, f.type);
 
         const record = {
           id,

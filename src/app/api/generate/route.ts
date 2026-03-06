@@ -138,17 +138,9 @@ export async function POST(req: NextRequest) {
           }
         });
 
-    // Use waitUntil on Cloudflare, otherwise just run in background
-    try {
-      const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-      const { ctx } = await getCloudflareContext();
-      ctx.waitUntil(generationPromise);
-    } catch {
-      // Local dev: fire and forget
-      generationPromise.catch((err) => {
-        console.error("[generate] background task error:", err);
-      });
-    }
+    generationPromise.catch((err) => {
+      console.error("[generate] background task error:", err);
+    });
 
     return NextResponse.json(task, { status: 201 });
   } catch (err: unknown) {
