@@ -25,10 +25,68 @@ const SIZES = [
   { label: "512×512", w: 512, h: 512 },
   { label: "1024×1024", w: 1024, h: 1024 },
 ];
+const PROMPT_DRAFT_STORAGE_KEY = "banana-icon.generate.prompt-draft";
+
+interface PromptDraft {
+  subject: string;
+  style: string;
+  background: string;
+  extras: string;
+  negativePrompt: string;
+  sizeKey: string;
+  batchSize: number;
+  batchMode: boolean;
+  selectedProject: string;
+}
 
 interface Project {
   id: string;
   name: string;
+}
+
+function getSizeKey(size: { w: number; h: number }) {
+  return `${size.w}x${size.h}`;
+}
+
+function readPromptDraft(): PromptDraft | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(PROMPT_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<PromptDraft>;
+    return {
+      subject: typeof parsed.subject === "string" ? parsed.subject : "",
+      style:
+        typeof parsed.style === "string" && parsed.style.trim()
+          ? parsed.style
+          : STYLE_PRESETS[0].value,
+      background:
+        typeof parsed.background === "string" && BACKGROUND_OPTIONS.includes(parsed.background)
+          ? parsed.background
+          : "透明",
+      extras: typeof parsed.extras === "string" ? parsed.extras : "",
+      negativePrompt: typeof parsed.negativePrompt === "string" ? parsed.negativePrompt : "",
+      sizeKey:
+        typeof parsed.sizeKey === "string" && SIZES.some((size) => getSizeKey(size) === parsed.sizeKey)
+          ? parsed.sizeKey
+          : getSizeKey(SIZES[3]),
+      batchSize:
+        typeof parsed.batchSize === "number"
+          ? Math.min(8, Math.max(1, parsed.batchSize))
+          : 1,
+      batchMode: Boolean(parsed.batchMode),
+      selectedProject: typeof parsed.selectedProject === "string" ? parsed.selectedProject : "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePromptDraft(draft: PromptDraft) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PROMPT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
 }
 
 export default function GeneratePage() {
@@ -57,6 +115,7 @@ export default function GeneratePage() {
   const [selectedProject, setSelectedProject] = useState("");
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
+  const draftReadyRef = useRef(false);
 
   const pendingCount = useTaskStore(
     (state) =>
@@ -75,10 +134,60 @@ export default function GeneratePage() {
       .then((r) => r.json() as Promise<Project[]>)
       .then((data) => {
         setProjects(data);
-        if (data.length > 0) setSelectedProject(data[0].id);
+        if (data.length > 0) {
+          setSelectedProject((current) => {
+            if (current && data.some((project) => project.id === current)) {
+              return current;
+            }
+            return data[0].id;
+          });
+        }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const draft = readPromptDraft();
+    if (draft) {
+      setSubject(draft.subject);
+      setStyle(draft.style);
+      setBackground(draft.background);
+      setExtras(draft.extras);
+      setNegativePrompt(draft.negativePrompt);
+      setSize(SIZES.find((size) => getSizeKey(size) === draft.sizeKey) || SIZES[3]);
+      setBatchSize(draft.batchSize);
+      setBatchMode(draft.batchMode);
+      setSelectedProject(draft.selectedProject);
+    }
+
+    draftReadyRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!draftReadyRef.current) return;
+
+    writePromptDraft({
+      subject,
+      style,
+      background,
+      extras,
+      negativePrompt,
+      sizeKey: getSizeKey(size),
+      batchSize,
+      batchMode,
+      selectedProject,
+    });
+  }, [
+    subject,
+    style,
+    background,
+    extras,
+    negativePrompt,
+    size,
+    batchSize,
+    batchMode,
+    selectedProject,
+  ]);
 
   const createProject = useCallback(async () => {
     if (!newProjectName.trim()) return;
@@ -432,6 +541,10 @@ export default function GeneratePage() {
             <div className="editor-surface">
               <div className="editor-block-label">当前上下文</div>
               <div className="editor-help">项目 {activeProjectName}，输出尺寸 {size.label}，{batchMode ? `当前将处理 ${batchFiles.length || 0} 个批量素材` : "当前为单张素材生成"}。</div>
+            </div>
+            <div className="editor-surface">
+              <div className="editor-block-label">提示词记忆</div>
+              <div className="editor-help">当前页会自动保存提示词草稿；切换到其他标签后返回，输入内容会自动恢复。</div>
             </div>
           </div>
         </section>

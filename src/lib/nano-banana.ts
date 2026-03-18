@@ -38,6 +38,49 @@ export function mapUpstreamStatus(
 
 const ENV_API_URL = process.env.NANO_BANANA_API_URL || "";
 const ENV_API_KEY = process.env.NANO_BANANA_API_KEY || "";
+const PLACEHOLDER_API_URLS = new Set([
+  "https://api.nano-banana.example.com",
+]);
+const PLACEHOLDER_API_KEYS = new Set([
+  "your_api_key_here",
+]);
+
+function normalizeApiUrl(url: string) {
+  return url.trim().replace(/\/+$/, "");
+}
+
+function isPlaceholderValue(value: string, placeholders: Set<string>) {
+  return placeholders.has(value.trim());
+}
+
+function validateApiUrl(url: string) {
+  if (!url) {
+    throw new Error("未配置 Nano Banana API URL，请先到设置页填写");
+  }
+
+  if (isPlaceholderValue(url, PLACEHOLDER_API_URLS)) {
+    throw new Error("Nano Banana API URL 仍是占位值，请先到设置页或 .env 填写真实地址");
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.protocol.startsWith("http")) {
+      throw new Error("invalid protocol");
+    }
+  } catch {
+    throw new Error("Nano Banana API URL 格式无效，请检查设置");
+  }
+}
+
+function validateApiKey(key: string) {
+  if (!key) {
+    throw new Error("未配置 Nano Banana API Key，请先到设置页填写");
+  }
+
+  if (isPlaceholderValue(key, PLACEHOLDER_API_KEYS)) {
+    throw new Error("Nano Banana API Key 仍是占位值，请先到设置页或 .env 填写真实密钥");
+  }
+}
 
 /**
  * Get API config. API Key priority: clientKey param > env var.
@@ -55,10 +98,18 @@ async function getApiConfig(clientKey?: string): Promise<{ url: string; key: str
   } catch {
     // fall back to env
   }
+
   return {
-    url,
-    key: clientKey || ENV_API_KEY,
+    url: normalizeApiUrl(url),
+    key: (clientKey || ENV_API_KEY).trim(),
   };
+}
+
+export async function assertNanoBananaConfig(clientKey?: string) {
+  const config = await getApiConfig(clientKey);
+  validateApiUrl(config.url);
+  validateApiKey(config.key);
+  return config;
 }
 
 async function apiFetch<T>(
@@ -66,7 +117,7 @@ async function apiFetch<T>(
   options: RequestInit = {},
   clientKey?: string,
 ): Promise<T> {
-  const { url, key } = await getApiConfig(clientKey);
+  const { url, key } = await assertNanoBananaConfig(clientKey);
   const res = await fetch(`${url}${path}`, {
     ...options,
     headers: {

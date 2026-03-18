@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { settings } from "@/lib/schema";
+import { assertNanoBananaConfig } from "@/lib/nano-banana";
 
 /** POST /api/settings/test — Test API connectivity */
 export async function POST(req: NextRequest) {
@@ -18,15 +19,16 @@ export async function POST(req: NextRequest) {
     // fall back to env
   }
 
-  if (!apiUrl) {
-    return NextResponse.json({ ok: false, error: "未配置 API URL" });
-  }
-  if (!apiKey) {
-    return NextResponse.json({ ok: false, error: "未配置 API Key" });
+  try {
+    await assertNanoBananaConfig(apiKey);
+  } catch (e) {
+    const error = e instanceof Error ? e.message : "配置无效";
+    return NextResponse.json({ ok: false, error });
   }
 
   const start = Date.now();
   try {
+    apiUrl = apiUrl.trim().replace(/\/+$/, "");
     const res = await fetch(`${apiUrl}/v1/generate`, {
       method: "POST",
       headers: {

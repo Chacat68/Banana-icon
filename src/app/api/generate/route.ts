@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDbFromContext } from "@/lib/db";
 import { generationTasks, assets } from "@/lib/schema";
-import { submitGeneration, buildPrompt, mapUpstreamStatus } from "@/lib/nano-banana";
+import {
+  submitGeneration,
+  buildPrompt,
+  mapUpstreamStatus,
+  assertNanoBananaConfig,
+} from "@/lib/nano-banana";
 import { eq, desc, inArray } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -51,6 +56,12 @@ export async function POST(req: NextRequest) {
 
     const db = await getDbFromContext();
     const prompt = buildPrompt({ subject, style, viewAngle, lighting, background, extras });
+    try {
+      await assertNanoBananaConfig(clientKey);
+    } catch (configError) {
+      const message = configError instanceof Error ? configError.message : "Nano Banana 配置无效";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
     const taskId = uuid();
     const now = new Date().toISOString();
 
